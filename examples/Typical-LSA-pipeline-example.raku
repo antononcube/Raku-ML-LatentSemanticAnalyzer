@@ -1,6 +1,6 @@
 use ML::LatentSemanticAnalyzer;
 use ML::LatentSemanticAnalyzer::Utilities;
-#use Lingua::EN::Stem::Porter;
+use Lingua::EN::Stem::Porter;
 
 # Collection of texts
 my @dsAbstracts = ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset();
@@ -23,13 +23,15 @@ srand(12);
 
 my &echo-function = {.say for |$_};
 
+my %stemming-rules = %docs.values.join(' ').lc.words.map({ $_ => porter($_) });
+
 # LSA pipeline
 my $lsaObj =
         ML::LatentSemanticAnalyzer.new
-                .make-document-term-matrix(docs => %docs, :stop-words, :!stemming-rules, :3min-length)
+                .make-document-term-matrix(docs => %docs, :stop-words, :%stemming-rules, :3min-length)
                 .apply-term-weight-functions(global-weight-func => "IDF", local-weight-func => "None", normalizer-func => "Cosine")
-                .extract-topics(:40number-of-topics, :10min-number-of-documents-per-term, method => "SVD")
+                .extract-topics(:40number-of-topics, :5min-number-of-documents-per-term, method => "SVD")
                 .echo-topics-interpretation(:12number-of-terms, :wide-form, :&echo-function)
-                .echo-statistical-thesaurus(terms => @words, :wide-form, :12number-of-nearest-neighbors, method => "cosine", :&echo-function);
+                .echo-statistical-thesaurus(terms => @words.map({ porter($_) }), :wide-form, :12number-of-nearest-neighbors, method => "cosine", :&echo-function);
 
 say $lsaObj;
