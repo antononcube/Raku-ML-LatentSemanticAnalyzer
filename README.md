@@ -58,7 +58,7 @@ use ML::LatentSemanticAnalyzer;
 use Lingua::EN::Stem::Porter;
 
 # Collection of texts
-my @dsAbstracts = load-abstracts-dataset();
+my @dsAbstracts = get-abstracts-dataset();
 my %docs = @dsAbstracts.map(*<ID>) Z=> @dsAbstracts.map(*<Abstract>);
 say %docs.elems;
 
