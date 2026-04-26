@@ -3,10 +3,12 @@ use v6.d;
 use Test;
 use Math::SparseMatrix;
 use ML::LatentSemanticAnalyzer;
+use ML::LatentSemanticAnalyzer::Utiltities;
 
 sub resource-documents() {
-    my @abstracts = get-abstracts-dataset().grep({ $_<ID> ~~ Str:D && $_<Abstract> ~~ Str:D && $_<Abstract>.chars > 0 });
-    (@abstracts.map(*<ID>) Z=> @abstracts.map(*<Abstract>)).Hash
+    my @abstracts = ML::LatentSemanticAnalyzer::Utiltities::get-abstracts-dataset();
+    @abstracts .= grep({ $_<ID> ~~ Str:D && $_<Abstract> ~~ Str:D && $_<Abstract>.chars > 0 });
+    return (@abstracts.map(*<ID>) Z=> @abstracts.map(*<Abstract>)).Hash;
 }
 
 sub small-factorized-lsa() {
