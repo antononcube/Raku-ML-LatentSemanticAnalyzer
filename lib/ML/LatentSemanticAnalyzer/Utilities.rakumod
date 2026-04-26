@@ -98,7 +98,7 @@ our sub stem-word(Str:D $word, $stemming-rules --> Str) {
 
 our sub diag-matrix(@values, @names --> Math::SparseMatrix:D) {
     my @rules = @values.kv.map(-> $i, $v { ($i, $i) => $v });
-    Math::SparseMatrix.new(rules => @rules, nrow => @values.elems, ncol => @values.elems, row-names => @names, column-names => @names)
+    Math::SparseMatrix.new(rules => @rules, nrow => @values.elems, ncol => @values.elems, row-names => @names, column-names => @names).to-adapted
 }
 
 #| Tokenize text with a given pattern matching.

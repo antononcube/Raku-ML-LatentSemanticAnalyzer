@@ -106,7 +106,9 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         my @di = @d.map({ .abs > 0 ?? 1 / $_ !! 1 });
         my $s = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@d, $h.row-names);
         my $si = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@di, $h.row-names);
-        %(W => $w.dot($si).set-column-names($w.column-names), H => $s.dot($h))
+        my $W = $w.dot($si);
+        $W .= set-column-names($w.column-names);
+        return %(:$W, H => $s.dot($h))
     }
 
     sub right-normalize-matrix-product(Math::SparseMatrix:D $w, Math::SparseMatrix:D $h --> Hash:D) {
@@ -114,7 +116,9 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         my @di = @d.map({ .abs > 0 ?? 1 / $_ !! 1 });
         my $s = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@d, $h.row-names);
         my $si = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@di, $h.row-names);
-        %(W => $w.dot($s).set-column-names($w.column-names), H => $si.dot($h))
+        my $W = $w.dot($s);
+        $W .= set-column-names($w.column-names);
+        return %(:$W, H => $si.dot($h))
     }
 
     sub row-dictionaries(Math::SparseMatrix:D $mat, Bool:D :$sort = True --> Hash:D) {
@@ -141,7 +145,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             ) {
         my $texts = $docs.defined ?? $docs !! $!documents;
         die 'Cannot find documents.' unless $texts.defined;
-        my $mat = document-term-matrix($texts, :$stop-words, :$stemming-rules, :$words-pattern, :$min-length);
+        my $mat = document-term-matrix($texts, :$stop-words, :$stemming-rules, :$words-pattern, :$min-length).to-adapted;
         self.set-documents($texts)
         if ML::LatentSemanticAnalyzer::Utilities::is-str-list($texts) || ML::LatentSemanticAnalyzer::Utilities::is-str-hash($texts);
         self.set-document-term-matrix($mat);
@@ -149,15 +153,23 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         self.set-stop-words($stop-words);
         self.set-stemming-rules($stemming-rules);
         self.set-words-pattern($words-pattern);
-        self
+        return self;
     }
 
     #| Apply LSI functions
-    method apply-term-weight-functions(
+    multi method apply-term-weight-functions(
+            $global-weight-func = 'IDF',
+            $local-weight-func = 'None',
+            $normalizer-func = 'Cosine'
+                                       ) {
+       return self.apply-term-weight-functions(:$global-weight-func, :$local-weight-func, :$normalizer-func);
+    }
+
+    #| Apply LSI functions
+    multi method apply-term-weight-functions(
             :$global-weight-func = 'IDF',
             :$local-weight-func = 'None',
-            :$normalizer-func = 'Cosine',
-            :$native = Whatever
+            :$normalizer-func = 'Cosine'
             ) {
         die 'There is no document-term matrix.' unless $!doc-term-mat ~~ Math::SparseMatrix:D;
         $!weighted-doc-term-mat = self.apply-lsi-weight-functions(
@@ -165,26 +177,40 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
                 $global-weight-func,
                 $local-weight-func,
                 $normalizer-func,
-                :$native
+                :native
         );
         $!global-weights = $global-weight-func ~~ Str:D
                 ?? self.global-term-function-weights($!doc-term-mat, $global-weight-func).Array
                 !! $global-weight-func;
         $!local-weight-function = $local-weight-func;
         $!normalizer-function = $normalizer-func;
-        self
+        return self;
     }
 
     #| Extract topics
     method extract-topics(
             :$number-of-topics = 12,
             :$min-number-of-documents-per-term = 12,
-            :$method is copy = 'SVD',
+            :$method is copy = Whatever,
             :$max-steps = 100) {
+        # Process $method
         if $method.isa(Whatever) { $method = 'SVD' }
 
-        my $smat = self.take-weighted-doc-term-mat().to-adapted;
+        die 'There is no weighted document-term matrix.'
+        unless self.take-weighted-doc-term-mat;
 
+        # Take terms present in large enough number of documents
+        my $smat01 = self.take-doc-term-mat.clone.unitize;
+        my %cs = |$smat01.column-sums(:pairs);
+        my @ccols = |%cs.grep({ $_.value ≥ $min-number-of-documents-per-term })>>.key.sort;
+
+        # Get matrix
+        my $smat = self.take-weighted-doc-term-mat[*;@ccols];
+
+        # The matrix should be adapted.
+        # say $smat.core-matrix.WHAT;
+
+        # Extraction
         my ($W, $H);
         given $method {
             when $_ ~~ Str:D && $_.lc ∈ <svd singular-value-decomposition singularvaluedecomposition> {
@@ -206,16 +232,20 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }
 
         # Automatic topic names
-        my $nd = (log10($number-of-topics).ceil) + 1;
-        my @topic-names = gather for ^ $!W.elems -> $i {
-            take "tpc." ~ $i.fmt('%0'~"{$nd}d")
+        my $nd = $number-of-topics.log(10).ceiling + 1;
+        my @topic-names = do for ^ $W.columns-count -> $i {
+            "tpc." ~ $i.fmt('%0'~"{$nd}d")
         }
 
         # Automatic topic names re-do using top 3 words per topic
         # TBD
 
-        $!W.set-column-names(@topic-names);
-        $!H.set-row-names(@topic-names);
+        $W.set-column-names(@topic-names);
+        $W.set-row-names($smat.row-names);
+        $H.set-row-names(@topic-names);
+        $H.set-column-names($smat.column-names);
+        self.set-w($W);
+        self.set-h($H);
 
         return self;
     }
@@ -246,7 +276,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         if $as-data-frame {
             $res = $wide-form
                     ?? %topics.map(-> $p { %(Topic => $p.key, Terms => $p.value.keys.Array) }).Array
-                    !! %topics.map(-> $p { $p.value.kv.map(-> $term, $score { %(Topic => $p.key, Term => $term, Score => $score) }) }).flat.Array;
+                    !! %topics.map(-> $p { $p.value.kv.map(-> $term, $score { %(Topic => $p.key, Term => $term, Score => $score) }) }).flat(1).Array;
         }
         $!value = $res;
         echo-function($res) if $echo;
@@ -261,6 +291,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
 
     multi method extract-statistical-thesaurus(@terms, Int:D :$n = 12, Str:D :$method = 'euclidean') {
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
+        say $!H.column-names;
         my %fact-res = left-normalize-matrix-product($!W, $!H);
         my $h = %fact-res<H>;
         my @known = @terms.grep({ $_ ∈ $h.column-names.Set }).sort;
@@ -409,11 +440,4 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             'LatentSemanticAnalyzer object.'
         }
     }
-}
-
-constant LatentSemanticAnalyzer is export = ML::LatentSemanticAnalyzer;
-
-#| Get the bundled conference abstracts dataset.
-our sub get-abstracts-dataset() is export {
-    ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset()
 }
