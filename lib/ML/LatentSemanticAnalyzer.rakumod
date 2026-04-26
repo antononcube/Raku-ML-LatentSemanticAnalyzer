@@ -1,7 +1,419 @@
 use v6.d;
 
-use ML::SparseMatrixRecommender;
+use Math::SparseMatrix;
+use ML::SparseMatrixRecommender::DocumentTermWeightish;
+use ML::LatentSemanticAnalyzer::Utilities;
 
-class ML::LatentSemanticAnalyzer {
+class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermWeightish {
+    has $.documents is rw;
+    has Math::SparseMatrix $.doc-term-mat is rw;
+    has Math::SparseMatrix $.weighted-doc-term-mat is rw;
+    has @.terms is rw;
+    has $.stop-words is rw;
+    has $.stemming-rules is rw;
+    has $.words-pattern is rw;
+    has Math::SparseMatrix $!W;
+    has Math::SparseMatrix $!H;
+    has $.global-weights is rw;
+    has $.local-weight-function is rw;
+    has $.normalizer-function is rw;
+    has $.method is rw;
+    has $.value is rw;
 
+    multi method new() {
+        self.bless
+    }
+
+    multi method new($arg) {
+        my $obj = self.bless;
+        given $arg {
+            when Math::SparseMatrix:D { $obj.set-document-term-matrix($_) }
+            when Positional:D | Associative:D { $obj.set-documents($_) }
+            default { die 'The argument is expected to be documents or a Math::SparseMatrix object.' }
+        }
+    }
+
+    method take-documents() { $!documents }
+    method take-document-term-matrix() { $!doc-term-mat }
+    method take-doc-term-mat() { $!doc-term-mat }
+    method take-weighted-document-term-matrix() { $!weighted-doc-term-mat }
+    method take-weighted-doc-term-mat() { $!weighted-doc-term-mat }
+    method take-terms() { @!terms }
+    method take-stop-words() { $!stop-words }
+    method take-stemming-rules() { $!stemming-rules }
+    method take-words-pattern() { $!words-pattern }
+    method take-w() { $!W }
+    method take-h() { $!H }
+    method take-global-term-weights() { $!global-weights }
+    method take-local-weight-function() { $!local-weight-function }
+    method take-normalizer-function() { $!normalizer-function }
+    method take-method() { $!method }
+    method take-value() { $!value }
+
+    method set-documents($arg) {
+        die 'The first argument is expected to be a list of strings or a hash of strings.'
+                unless ML::LatentSemanticAnalyzer::Utilities::is-str-list($arg) || ML::LatentSemanticAnalyzer::Utilities::is-str-hash($arg);
+        $!documents = $arg;
+        self
+    }
+
+    method set-document-term-matrix(Math::SparseMatrix:D $arg) {
+        $!doc-term-mat = $arg;
+        @!terms = $arg.column-names.Array;
+        self
+    }
+
+    method set-weighted-document-term-matrix(Math::SparseMatrix:D $arg) {
+        $!weighted-doc-term-mat = $arg;
+        @!terms = $arg.column-names.Array;
+        self
+    }
+
+    method set-global-term-weights($arg) { $!global-weights = $arg; self }
+    method set-local-weight-function($arg) { $!local-weight-function = $arg; self }
+    method set-normalizer-function($arg) { $!normalizer-function = $arg; self }
+    method set-w(Math::SparseMatrix:D $arg) { $!W = $arg; self }
+    method set-h(Math::SparseMatrix:D $arg) { $!H = $arg; self }
+    method set-method($arg) { $!method = $arg; self }
+    method set-terms($arg) { @!terms = $arg.Array; self }
+    method set-stop-words($arg) { $!stop-words = $arg; self }
+    method set-stemming-rules($arg) { $!stemming-rules = $arg; self }
+    method set-words-pattern($arg) { $!words-pattern = $arg; self }
+    method set-value($arg) { $!value = $arg; self }
+
+    method clone() {
+        my $obj = ML::LatentSemanticAnalyzer.new;
+        $obj.set-documents($!documents) if $!documents.defined;
+        $obj.set-document-term-matrix($!doc-term-mat.clone) if $!doc-term-mat.defined;
+        $obj.set-weighted-document-term-matrix($!weighted-doc-term-mat.clone) if $!weighted-doc-term-mat.defined;
+        $obj.set-w($!W.clone) if $!W.defined;
+        $obj.set-h($!H.clone) if $!H.defined;
+        $obj.set-terms(@!terms);
+        $obj.set-stop-words($!stop-words);
+        $obj.set-stemming-rules($!stemming-rules);
+        $obj.set-words-pattern($!words-pattern);
+        $obj.set-global-term-weights($!global-weights);
+        $obj.set-local-weight-function($!local-weight-function);
+        $obj.set-normalizer-function($!normalizer-function);
+        $obj.set-method($!method);
+        $obj.set-value($!value);
+        $obj
+    }
+
+
+    sub left-normalize-matrix-product(Math::SparseMatrix:D $w, Math::SparseMatrix:D $h --> Hash:D) {
+        my @d = $w.multiply($w).column-sums.map({ sqrt($_) });
+        my @di = @d.map({ .abs > 0 ?? 1 / $_ !! 1 });
+        my $s = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@d, $h.row-names);
+        my $si = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@di, $h.row-names);
+        %(W => $w.dot($si).set-column-names($w.column-names), H => $s.dot($h))
+    }
+
+    sub right-normalize-matrix-product(Math::SparseMatrix:D $w, Math::SparseMatrix:D $h --> Hash:D) {
+        my @d = $h.multiply($h).row-sums.map({ sqrt($_) });
+        my @di = @d.map({ .abs > 0 ?? 1 / $_ !! 1 });
+        my $s = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@d, $h.row-names);
+        my $si = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@di, $h.row-names);
+        %(W => $w.dot($s).set-column-names($w.column-names), H => $si.dot($h))
+    }
+
+    sub row-dictionaries(Math::SparseMatrix:D $mat, Bool:D :$sort = True --> Hash:D) {
+        my %rows = $mat.row-names.map({ $_ => {} }).Hash;
+        for $mat.tuples(:dataset, :names) -> %rec {
+            %rows{%rec<i>}{%rec<j>} = %rec<x>;
+        }
+        return %rows unless $sort;
+        %rows.map(-> $p {
+            $p.key => $p.value.sort({ $^b.value <=> $^a.value }).Hash
+        }).Hash
+    }
+
+    sub mean(@x) { @x.elems ?? @x.sum / @x.elems !! 0 }
+    sub variance(@x) { @x.elems ?? @x.map({ ($_ - mean(@x)) ** 2 }).sum / @x.elems !! 0 }
+
+    #| Make document-term matrix
+    method make-document-term-matrix(
+            :$docs = Nil,
+            :$stop-words = [],
+            :$stemming-rules = Nil,
+            :$words-pattern = ML::LatentSemanticAnalyzer::Utilities::get-default-word-pattern,
+            Int:D :$min-length = 2
+            ) {
+        my $texts = $docs.defined ?? $docs !! $!documents;
+        die 'Cannot find documents.' unless $texts.defined;
+        my $mat = document-term-matrix($texts, :$stop-words, :$stemming-rules, :$words-pattern, :$min-length);
+        self.set-documents($texts)
+        if ML::LatentSemanticAnalyzer::Utilities::is-str-list($texts) || ML::LatentSemanticAnalyzer::Utilities::is-str-hash($texts);
+        self.set-document-term-matrix($mat);
+        self.set-terms($mat.column-names);
+        self.set-stop-words($stop-words);
+        self.set-stemming-rules($stemming-rules);
+        self.set-words-pattern($words-pattern);
+        self
+    }
+
+    #| Apply LSI functions
+    method apply-term-weight-functions(
+            :$global-weight-func = 'IDF',
+            :$local-weight-func = 'None',
+            :$normalizer-func = 'Cosine',
+            :$native = Whatever
+            ) {
+        die 'There is no document-term matrix.' unless $!doc-term-mat ~~ Math::SparseMatrix:D;
+        $!weighted-doc-term-mat = self.apply-lsi-weight-functions(
+                $!doc-term-mat,
+                $global-weight-func,
+                $local-weight-func,
+                $normalizer-func,
+                :$native
+        );
+        $!global-weights = $global-weight-func ~~ Str:D
+                ?? self.global-term-function-weights($!doc-term-mat, $global-weight-func).Array
+                !! $global-weight-func;
+        $!local-weight-function = $local-weight-func;
+        $!normalizer-function = $normalizer-func;
+        self
+    }
+
+    #| Extract topics
+    method extract-topics(
+            :$number-of-topics = 12,
+            :$min-number-of-documents-per-term = 12,
+            :$method is copy = 'SVD',
+            :$max-steps = 100) {
+        if $method.isa(Whatever) { $method = 'SVD' }
+
+        my $smat = self.take-weighted-doc-term-mat().to-adapted;
+
+        my ($W, $H);
+        given $method {
+            when $_ ~~ Str:D && $_.lc ∈ <svd singular-value-decomposition singularvaluedecomposition> {
+                my ($s, $v);
+
+                ($W, $s, $v) = $smat.svd(:$number-of-topics);
+
+                # Scale V with S (in order to get H)
+                $H = $s.dot($v);
+
+                self.set-method('SVD')
+            }
+            when $_ ~~ Str:D && $_.lc ∈ <nmf nnmf non-negative-matrix-factorization nonnegativematrixfactorization> {
+                die 'Topic extraction with Non-Negative Matrix Factorization is not implemented yet.'
+            }
+            default {
+                die 'The value of $method is expected to be "SVD", "NNMF", or Whatever.'
+            }
+        }
+
+        # Automatic topic names
+        my $nd = (log10($number-of-topics).ceil) + 1;
+        my @topic-names = gather for ^ $!W.elems -> $i {
+            take "tpc." ~ $i.fmt('%0'~"{$nd}d")
+        }
+
+        # Automatic topic names re-do using top 3 words per topic
+        # TBD
+
+        $!W.set-column-names(@topic-names);
+        $!H.set-row-names(@topic-names);
+
+        return self;
+    }
+
+    method normalize-matrix-product(Bool:D :$normalize-left = True, Bool:D :$order-by-significance = True) {
+        die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
+        my %nres = $normalize-left ?? left-normalize-matrix-product($!W, $!H) !! right-normalize-matrix-product($!W, $!H);
+        if $order-by-significance {
+            my %factors = $normalize-left
+                    ?? %nres<H>.multiply(%nres<H>).row-sums(:pairs)
+                    !! %nres<W>.multiply(%nres<W>).column-sums(:pairs);
+            my @names = %factors.sort({ $^b.value <=> $^a.value })>>.key;
+            %nres<W> = %nres<W>[*; @names];
+            %nres<H> = %nres<H>[@names];
+        }
+        $!W = %nres<W>;
+        $!H = %nres<H>;
+        self
+    }
+
+    method get-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$as-data-frame = False, Bool:D :$wide-form = False, Bool:D :$echo = True, :&echo-function = &say) {
+        die 'The argument number-of-terms is expected to be a positive integer.' unless $number-of-terms > 0;
+        die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
+        my %topics = row-dictionaries($!H, :sort).map(-> $p {
+            $p.key => $p.value.sort({ $^b.value <=> $^a.value }).head($number-of-terms).Hash
+        }).Hash;
+        my $res = %topics;
+        if $as-data-frame {
+            $res = $wide-form
+                    ?? %topics.map(-> $p { %(Topic => $p.key, Terms => $p.value.keys.Array) }).Array
+                    !! %topics.map(-> $p { $p.value.kv.map(-> $term, $score { %(Topic => $p.key, Term => $term, Score => $score) }) }).flat.Array;
+        }
+        $!value = $res;
+        echo-function($res) if $echo;
+        self
+    }
+
+    method echo-topics-table(|c) { self.echo-topics-interpretation(|c) }
+
+    method echo-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$as-data-frame = True, Bool:D :$wide-form = False, :&echo-function = &say) {
+        self.get-topics-interpretation(:$number-of-terms, :$as-data-frame, :$wide-form, :echo, :&echo-function)
+    }
+
+    multi method extract-statistical-thesaurus(@terms, Int:D :$n = 12, Str:D :$method = 'euclidean') {
+        die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
+        my %fact-res = left-normalize-matrix-product($!W, $!H);
+        my $h = %fact-res<H>;
+        my @known = @terms.grep({ $_ ∈ $h.column-names.Set }).sort;
+        die 'None of the given words are known.' unless @known;
+
+        my %res;
+        for @known -> $word {
+            my @target = $h.column-at($word).dense-matrix.map(*.[0]);
+            my @distances;
+            for $h.column-names -> $term {
+                my @vec = $h.column-at($term).dense-matrix.map(*.[0]);
+                my $d = do if $method.lc eq 'cosine' {
+                    my $num = (@target Z* @vec).sum;
+                    my $den = sqrt((@target Z* @target).sum) * sqrt((@vec Z* @vec).sum);
+                    $den > 0 ?? 1 - $num / $den !! 1;
+                } else {
+                    sqrt((@target Z- @vec).map(* ** 2).sum);
+                }
+                @distances.push($term => $d);
+            }
+            %res{$word} = @distances.sort(*.value).head($n + 1).Hash;
+        }
+        $!value = %res;
+        self
+    }
+
+    multi method extract-statistical-thesaurus(:@terms!, Int:D :$n = 12, Str:D :$method = 'euclidean') {
+        self.extract-statistical-thesaurus(@terms, :$n, :$method)
+    }
+
+    method get-statistical-thesaurus(
+            :@terms = $!value,
+            Int:D :$number-of-nearest-neighbors = 12,
+            Str:D :$method = 'cosine',
+            Bool:D :$as-data-frame = True,
+            Bool:D :$wide-form = False,
+            Bool:D :$echo = True,
+            :&echo-function = &say
+            ) {
+        self.extract-statistical-thesaurus(@terms, n => $number-of-nearest-neighbors, :$method);
+        my $res = $!value;
+        if $as-data-frame {
+            $res = $wide-form
+                    ?? $!value.map(-> $p { %(SearchTerm => $p.key, Terms => $p.value.keys.Array) }).Array
+                    !! $!value.map(-> $p { $p.value.kv.map(-> $term, $dist { %(SearchTerm => $p.key, Term => $term, TermDistance => $dist) }) }).flat.Array;
+        }
+        $!value = $res;
+        echo-function($res) if $echo;
+        self
+    }
+
+    method echo-statistical-thesaurus(|c) {
+        self.get-statistical-thesaurus(|c, :echo)
+    }
+
+    method represent-by-terms($query, Bool:D :$apply-lsi-functions = True) {
+        die 'Cannot find document-term matrix.' unless $!doc-term-mat ~~ Math::SparseMatrix:D || $!weighted-doc-term-mat ~~ Math::SparseMatrix:D;
+        given $query {
+            when Str:D {
+                return self.represent-by-terms([$_], :$apply-lsi-functions);
+            }
+            when Positional:D {
+                my $qmat = ML::LatentSemanticAnalyzer.new
+                        .make-document-term-matrix(
+                                docs => $_,
+                                stop-words => $!stop-words,
+                                stemming-rules => $!stemming-rules,
+                                words-pattern => $!words-pattern
+                        )
+                        .take-doc-term-mat;
+                return self.represent-by-terms($qmat, :$apply-lsi-functions);
+            }
+            when Math::SparseMatrix:D {
+                my @columns = $!doc-term-mat.defined ?? $!doc-term-mat.column-names !! $!weighted-doc-term-mat.column-names;
+                my $qmat = $_.impose-column-names(@columns);
+                die 'The obtained query matrix has no entries.' if $qmat.explicit-length == 0;
+                if $apply-lsi-functions {
+                    die 'Global, local, and normalizer weight functions must be available.'
+                            unless $!global-weights.defined && $!local-weight-function.defined && $!normalizer-function.defined;
+                    $qmat = self.apply-lsi-weight-functions($qmat, $!global-weights, $!local-weight-function, $!normalizer-function);
+                }
+                $!value = $qmat;
+            }
+            default {
+                die 'Unknown type of the argument query.';
+            }
+        }
+        self
+    }
+
+    method represent-by-topics($query, Bool:D :$apply-lsi-functions = True, Str:D :$method = 'algebraic') {
+        die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
+        die 'The argument method is expected to be algebraic or recommendation.'
+                unless $method.lc ∈ <algebraic recommendation>;
+        my $qmat = self.represent-by-terms($query, :$apply-lsi-functions).take-value;
+        $qmat = $qmat.impose-column-names($!H.column-names);
+        die 'The obtained query matrix has no entries.' if $qmat.explicit-length == 0;
+        self.normalize-matrix-product(:!normalize-left);
+        $!value = $qmat.dot($!H.transpose);
+        self
+    }
+
+    method echo-document-term-matrix-statistics(Real :$log-base = 0) {
+        die 'There is no document-term matrix.' unless $!doc-term-mat ~~ Math::SparseMatrix:D;
+        say 'Document-term matrix:';
+        say $!doc-term-mat.gist;
+
+        my @row-counts = $!doc-term-mat.unitize.row-sums;
+        my @col-counts = $!doc-term-mat.unitize.column-sums;
+        if $log-base > 0 {
+            @row-counts = @row-counts.map({ $_ > 0 ?? log($_, $log-base) !! 0 });
+            @col-counts = @col-counts.map({ $_ > 0 ?? log($_, $log-base) !! 0 });
+        }
+        for 'Number of terms per document' => @row-counts, 'Number of documents per term' => @col-counts -> $p {
+            my @x = $p.value;
+            say "{$p.key}:";
+            say "\tmin:     {@x.min // 0}";
+            say "\tmean:    {mean(@x)}";
+            say "\tmax:     {@x.max // 0}";
+            say "\tstd:     {sqrt(variance(@x))}";
+        }
+        self
+    }
+
+    method Hash(::?CLASS:D: --> Hash:D) {
+        %(
+                matrices => %(doc-term-mat => $!doc-term-mat, weighted-doc-term-mat => $!weighted-doc-term-mat),
+                W => $!W,
+                H => $!H,
+                stemming-rules => $!stemming-rules,
+                stop-words => $!stop-words,
+                global-weights => $!global-weights,
+                local-weight-function => $!local-weight-function,
+                normalizer-function => $!normalizer-function,
+                method => $!method,
+                value => $!value
+        )
+    }
+
+    multi method gist(::?CLASS:D: --> Str) {
+        if $!doc-term-mat ~~ Math::SparseMatrix:D {
+            "LatentSemanticAnalyzer object with {$!doc-term-mat.rows-count} documents and {$!doc-term-mat.columns-count} terms."
+        } elsif $!weighted-doc-term-mat ~~ Math::SparseMatrix:D {
+            "LatentSemanticAnalyzer object with {$!weighted-doc-term-mat.rows-count} documents and {$!weighted-doc-term-mat.columns-count} terms."
+        } else {
+            'LatentSemanticAnalyzer object.'
+        }
+    }
+}
+
+constant LatentSemanticAnalyzer is export = ML::LatentSemanticAnalyzer;
+
+#| Get the bundled conference abstracts dataset.
+our sub get-abstracts-dataset() is export {
+    ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset()
 }
