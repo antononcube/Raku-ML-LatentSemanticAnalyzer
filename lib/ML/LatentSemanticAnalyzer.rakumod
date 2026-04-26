@@ -216,10 +216,10 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             when $_ ~~ Str:D && $_.lc ∈ <svd singular-value-decomposition singularvaluedecomposition> {
                 my ($s, $v);
 
-                ($W, $s, $v) = $smat.svd(:$number-of-topics);
+                ($W, $s, $v) = $smat.svd($number-of-topics);
 
                 # Scale V with S (in order to get H)
-                $H = $s.dot($v);
+                $H = $s.dot($v.transpose);
 
                 self.set-method('SVD')
             }
