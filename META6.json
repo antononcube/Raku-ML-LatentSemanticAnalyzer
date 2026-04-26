@@ -1,0 +1,30 @@
+{
+    "name": "ML::LatentSemanticAnalyzer",
+    "description": "Package for Latent Semantic Analysis (LSA) computations.",
+    "version": "0.0.1",
+    "authors": [
+        "Anton Antonov"
+    ],
+    "auth": "zef:antononcube",
+    "depends": [
+        "Math::SparseMatrix:ver<0.0.14+>",
+        "ML::SparseMatrixRecommender:ver<0.0.3+>"
+    ],
+    "build-depends": [],
+    "provides": {
+        "ML::LatentSemanticAnalyzer": "lib/ML/LatentSemanticAnalyzer.rakumod"
+    },
+    "license": "Artistic-2.0",
+    "tags": [
+        "math",
+        "mathematics",
+        "matrix",
+        "sparse matrix algebra",
+        "sparse matrix",
+        "sparse",
+        "latent semantic analysis",
+        "lsa"
+    ],
+    "api": "0",
+    "source-url": "https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer.git"
+}
