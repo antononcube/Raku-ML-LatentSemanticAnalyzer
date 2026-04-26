@@ -13,8 +13,12 @@
     ],
     "build-depends": [],
     "provides": {
-        "ML::LatentSemanticAnalyzer": "lib/ML/LatentSemanticAnalyzer.rakumod"
+        "ML::LatentSemanticAnalyzer": "lib/ML/LatentSemanticAnalyzer.rakumod",
+        "ML::LatentSemanticAnalyzer::Utilities": "lib/ML/LatentSemanticAnalyzer/Utilities.rakumod"
     },
+    "resources": [
+        "dfAbstracts.csv"
+    ],
     "license": "Artistic-2.0",
     "tags": [
         "math",
