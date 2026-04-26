@@ -106,7 +106,7 @@ also uses LSI functions -- this package uses LSI methods of the class `ML::Spars
 
 ------
 
-## Related Mathematica and R packages
+## Related Mathematica, Python, and R packages
 
 ### Mathematica
 
@@ -122,6 +122,28 @@ lsaObj =
    LSAMonExtractTopics["NumberOfTopics" -> 20, Method -> "NNMF", "MaxSteps" -> 16, "MinNumberOfDocumentsPerTerm" -> 20]⟹
    LSAMonEchoTopicsTable["NumberOfTerms" -> 10]⟹
    LSAMonEchoStatisticalThesaurus["Words" -> Map[WordData[#, "PorterStem"]&, {"notebook", "computational", "function", "neural", "talk", "programming"}]];
+```
+
+### Python
+
+Here is a corresponding Python pipeline with the package [AAp3]:
+
+```python
+lsaObj = (LatentSemanticAnalyzer()
+          .make_document_term_matrix(docs=docs2,
+                                     stop_words=True,
+                                     stemming_rules=True,
+                                     min_length=3)
+          .apply_term_weight_functions(global_weight_func="IDF",
+                                       local_weight_func="None",
+                                       normalizer_func="Cosine")
+          .extract_topics(number_of_topics=40, min_number_of_documents_per_term=10, method="NNMF")
+          .echo_topics_interpretation(number_of_terms=12, wide_form=True)
+          .echo_statistical_thesaurus(terms=stemmerObj.stemWords(words),
+                                      wide_form=True,
+                                      number_of_nearest_neighbors=12,
+                                      method="cosine",
+                                      echo_function=lambda x: print(x.to_string())))
 ```
 
 ### R 
@@ -151,7 +173,7 @@ to propagate (image) data generated in Python into those systems.
 ### Using grammar-based interpreters
 
 The project "Raku for Prediction", [AAr2, AAv2, AAp8], has a Domain Specific Language (DSL) grammar and interpreters 
-that allow the generation of LSA code for corresponding Mathematica, Python, R packages. 
+that allow the generation of LSA code for corresponding Mathematica, Python, R, and Raku packages. 
 
 Here is Command Line Interface (CLI) invocation example that generate code for this package:
 
@@ -162,18 +184,17 @@ Here is Command Line Interface (CLI) invocation example that generate code for t
 
 ### NLP Template Engine
 
-Here is an example using the NLP Template Engine, [AAr2, AAv3]:
+Here is an example using the NLP Template Engine, [AAr2, AAv3, AAp9]:
 
 ```mathematica
-Concretize["create from aDocs; apply LSI functions IDF, None, Cosine; extract 20 topics; show topics table", 
-  "TargetLanguage" -> "Python"]
+concretize("create from aDocs; apply LSI functions IDF, None, Cosine; extract 20 topics; show topics table", "TargetLanguage" -> "Raku")
 (* 
-lsaObj = (LatentSemanticAnalyzer()
-          .make_document_term_matrix(docs=aDocs, stop_words=None, stemming_rules=None,min_length=3)
-          .apply_term_weight_functions(global_weight_func='IDF', local_weight_func='None',normalizer_func='Cosine')
-          .extract_topics(number_of_topics=20, min_number_of_documents_per_term=20, method='SVD')
-          .echo_topics_interpretation(number_of_terms=10, wide_form=True)
-          .echo_statistical_thesaurus(terms=stemmerObj.stemWords([\"topics table\"]), wide_form=True, number_of_nearest_neighbors=12, method='cosine', echo_function=lambda x: print(x.to_string())))
+my $lsaObj = LatentSemanticAnalyzer.new.
+          .make-document-term-matrix(docs => aDocs, stop-words => Whatever, stemming-rules = Whatever, min-length => 3)
+          .apply-term-weight-functions(global-weight-func => 'IDF', local-weight-func => 'None',normalizer-func => 'Cosine')
+          .extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 20, method => 'SVD')
+          .echo-topics-interpretation(number-of-terms => 10, :wide-form)
+          .echo-statistical-thesaurus(terms=["topics table"], :wide-form, number-of-nearest-neighbors => 12, method => 'cosine')
 *)
 
 ```
@@ -238,6 +259,11 @@ lsaObj = (LatentSemanticAnalyzer()
 [AAp8] Anton Antonov,
 [DSL::English::LatentSemanticAnalysisWorkflows, Raku package](https://github.com/antononcube/Raku-DSL-English-LatentSemanticAnalysisWorkflows),
 (2020-2024),
+[GitHub/antononcube](https://github.com/antononcube).
+
+[AAp9] Anton Antonov,
+[ML::NLPTemplateEngine, Raku package](https://github.com/antononcube/Raku-ML-NLPTemplateEngine),
+(2023-2025),
 [GitHub/antononcube](https://github.com/antononcube).
 
 
