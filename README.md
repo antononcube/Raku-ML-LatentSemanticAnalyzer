@@ -86,7 +86,7 @@ my $lsaObj =
         .extract-topics(:40number-of-topics, :10min-number-of-documents-per-term, method => "SVD")
         .echo-topics-interpretation(:12number-of-terms, :!wide-form)
         .echo_statistical_thesaurus(
-                terms = @words.map(*.&porter),
+                terms => @words.map(*.&porter),
                 :wide-form,
                 :12number-of-nearest-neighbors,
                 method => "cosine",
