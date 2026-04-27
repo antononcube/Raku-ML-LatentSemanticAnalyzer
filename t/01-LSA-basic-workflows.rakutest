@@ -11,27 +11,6 @@ sub resource-documents() {
     return (@abstracts.map(*<ID>) Z=> @abstracts.map(*<Abstract>)).Hash;
 }
 
-sub small-factorized-lsa() {
-    my %docs =
-            d1 => 'apple banana',
-            d2 => 'banana carrot';
-    my $w = Math::SparseMatrix.new(
-            dense-matrix => [[1, 0], [0, 2]],
-            row-names => <d1 d2>,
-            column-names => <t1 t2>
-    );
-    my $h = Math::SparseMatrix.new(
-            dense-matrix => [[3, 1, 0], [0, 2, 4]],
-            row-names => <t1 t2>,
-            column-names => <apple banana carrot>
-    );
-    ML::LatentSemanticAnalyzer.new
-            .make-document-term-matrix(docs => %docs, :1min-length)
-            .set-w($w)
-            .set-h($h)
-            .set-method('SVD')
-}
-
 my %docs = resource-documents();
 my $lsa = ML::LatentSemanticAnalyzer.new
         .make-document-term-matrix(docs => %docs, :stop-words, :stemming-rules, :3min-length)
@@ -47,21 +26,20 @@ isa-ok $lsa.take-weighted-doc-term-mat, Math::SparseMatrix, 'creates a weighted 
 ok $lsa.take-doc-term-mat.rows-count > 570, 'document-term matrix has the expected document count';
 ok $lsa.take-doc-term-mat.columns-count > 2000, 'document-term matrix has the expected term count';
 
-#ok $lsa.extract-topics(number-of-topics => 20, method => 'SVD', max-steps => 40),
-#        'SVD topic extraction';
+ok $lsa.extract-topics(number-of-topics => 20, method => 'SVD', max-steps => 40),
+        'SVD topic extraction';
 dies-ok { $lsa.extract-topics(number-of-topics => 20, method => 'NNMF', max-steps => 5) },
         'NNMF topic extraction is explicitly unsupported';
 
-my $factorized = small-factorized-lsa();
-$factorized.get-statistical-thesaurus(
-        terms => <apple banana>,
+$lsa.get-statistical-thesaurus(
+        terms => <notebook function>,
         :wide-form,
         :!echo,
         number-of-nearest-neighbors => 2,
         method => 'cosine'
 );
-isa-ok $factorized.take-value, Array, 'statistical thesaurus can be returned in table form';
-is $factorized.take-value.elems, 2, 'wide statistical thesaurus has one row per search term';
+isa-ok $lsa.take-value, Array, 'statistical thesaurus can be returned in table form';
+is $lsa.take-value.elems, 2, 'wide statistical thesaurus has one row per search term';
 
 my @queries = 'Notebook of differential equations solutions.',
         'Neural networking training process',
@@ -70,8 +48,8 @@ my $term-representation = $lsa.represent-by-terms(@queries, :!apply-lsi-function
 isa-ok $term-representation, Math::SparseMatrix, 'queries can be represented by terms';
 is $term-representation.rows-count, @queries.elems, 'term representation has one row per query';
 
-my $topic-representation = $factorized
-        .represent-by-topics(['apple banana'], :!apply-lsi-functions, method => 'recommendation')
+my $topic-representation = $lsa
+        .represent-by-topics(['notebook for demonstration of classification'], :!apply-lsi-functions, method => 'recommendation')
         .take-value;
 isa-ok $topic-representation, Math::SparseMatrix, 'queries can be represented by supplied topics';
 is $topic-representation.rows-count, 1, 'topic representation has one row per query';
