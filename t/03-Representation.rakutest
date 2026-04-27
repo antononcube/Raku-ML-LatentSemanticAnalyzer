@@ -10,7 +10,7 @@ sub small-lsa() {
             d2 => 'neural networking training',
             d3 => 'time series anomaly';
 
-    LatentSemanticAnalyzer.new
+    ML::LatentSemanticAnalyzer.new
             .make-document-term-matrix(docs => %docs, :1min-length)
             .apply-term-weight-functions(
                     global-weight-func => 'IDF',
@@ -33,7 +33,7 @@ sub factorized-lsa() {
             row-names => <t1 t2>,
             column-names => <apple banana carrot>
     );
-    LatentSemanticAnalyzer.new
+    ML::LatentSemanticAnalyzer.new
             .make-document-term-matrix(docs => %docs, :1min-length)
             .apply-term-weight-functions(
                     global-weight-func => 'IDF',

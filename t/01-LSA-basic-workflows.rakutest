@@ -3,10 +3,10 @@ use v6.d;
 use Test;
 use Math::SparseMatrix;
 use ML::LatentSemanticAnalyzer;
-use ML::LatentSemanticAnalyzer::Utiltities;
+use ML::LatentSemanticAnalyzer::Utilities;
 
 sub resource-documents() {
-    my @abstracts = ML::LatentSemanticAnalyzer::Utiltities::get-abstracts-dataset();
+    my @abstracts = ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset();
     @abstracts .= grep({ $_<ID> ~~ Str:D && $_<Abstract> ~~ Str:D && $_<Abstract>.chars > 0 });
     return (@abstracts.map(*<ID>) Z=> @abstracts.map(*<Abstract>)).Hash;
 }
@@ -25,7 +25,7 @@ sub small-factorized-lsa() {
             row-names => <t1 t2>,
             column-names => <apple banana carrot>
     );
-    LatentSemanticAnalyzer.new
+    ML::LatentSemanticAnalyzer.new
             .make-document-term-matrix(docs => %docs, :1min-length)
             .set-w($w)
             .set-h($h)
@@ -33,7 +33,7 @@ sub small-factorized-lsa() {
 }
 
 my %docs = resource-documents();
-my $lsa = LatentSemanticAnalyzer.new
+my $lsa = ML::LatentSemanticAnalyzer.new
         .make-document-term-matrix(docs => %docs, :stop-words, :stemming-rules, :3min-length)
         .apply-term-weight-functions(
                 global-weight-func => 'IDF',

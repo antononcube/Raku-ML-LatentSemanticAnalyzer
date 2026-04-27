@@ -11,7 +11,7 @@ sub resource-documents() {
 
 my %docs = resource-documents();
 
-my $lsa1 = LatentSemanticAnalyzer.new
+my $lsa1 = ML::LatentSemanticAnalyzer.new
         .make-document-term-matrix(docs => %docs, :stop-words, :stemming-rules, :3min-length)
         .apply-term-weight-functions(
                 global-weight-func => 'IDF',
@@ -25,7 +25,7 @@ isa-ok $lsa1.take-weighted-doc-term-mat, Math::SparseMatrix, 'method creation se
 ok $lsa1.take-doc-term-mat.rows-count > 570, 'method-created matrix has the expected document count';
 ok $lsa1.take-doc-term-mat.columns-count > 2000, 'method-created matrix has the expected term count';
 
-my $lsa2 = LatentSemanticAnalyzer.new(%docs)
+my $lsa2 = ML::LatentSemanticAnalyzer.new(%docs)
         .make-document-term-matrix(:stop-words, :stemming-rules, :3min-length)
         .apply-term-weight-functions(
                 global-weight-func => 'IDF',
