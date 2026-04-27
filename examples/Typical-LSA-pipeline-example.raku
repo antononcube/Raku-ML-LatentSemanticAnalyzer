@@ -8,9 +8,9 @@ my @dsAbstracts = ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset()
 # Remove non-strings
 @dsAbstracts .= grep({ $_<Abstract> ~~ Str:D });
 
-.say for @dsAbstracts.head(3);
+say "@dsAbstracts.elems : {@dsAbstracts.elems}";
 my %docs = @dsAbstracts.map(*<ID>) Z=> @dsAbstracts.map(*<Abstract>);
-say %docs.elems;
+say "%docs.elems : {%docs.elems}";
 
 # Stemmer object (to preprocess words in the pipeline below)
 #say &porter.WHY;
@@ -23,15 +23,17 @@ srand(12);
 
 my &echo-function = {.say for |$_};
 
-my %stemming-rules = %docs.values.join(' ').lc.words.map({ $_ => porter($_) });
+my %stemming-rules = %docs.values.join(' ').lc.split(/\s | <:punct> /, :skip-empty)>>.trim.map({ $_ => porter($_) });
+
+#.say for |%stemming-rules;
 
 # LSA pipeline
 my $lsaObj =
         ML::LatentSemanticAnalyzer.new
                 .make-document-term-matrix(docs => %docs, :stop-words, :%stemming-rules, :3min-length)
                 .apply-term-weight-functions(global-weight-func => "IDF", local-weight-func => "None", normalizer-func => "Cosine")
-                .extract-topics(:40number-of-topics, :5min-number-of-documents-per-term, method => "SVD")
+                .extract-topics(:40number-of-topics, :10min-number-of-documents-per-term, method => "SVD")
                 .echo-topics-interpretation(:12number-of-terms, :wide-form, :&echo-function)
-                .echo-statistical-thesaurus(terms => @words.map({ porter($_) }), :wide-form, :12number-of-nearest-neighbors, method => "cosine", :&echo-function);
+                .echo-statistical-thesaurus(terms => @words.map({ porter($_) }), :wide-form, :12number-of-nearest-neighbors, method => "euclidean", :&echo-function);
 
 say $lsaObj;
