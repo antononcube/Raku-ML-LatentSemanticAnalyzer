@@ -292,7 +292,6 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
 
     multi method extract-statistical-thesaurus(@terms, Int:D :$n = 12, Str:D :$method = 'euclidean') {
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
-        say $!H.column-names;
         my %fact-res = left-normalize-matrix-product($!W, $!H);
         my $h = %fact-res<H>;
         my @known = @terms.grep({ $_ ∈ $h.column-names }).sort;
@@ -308,21 +307,16 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
                     .create-from-matrices(%("Words" => $HLocal.transpose))
                     .apply-term-weight-functions("None", "None","Cosine");
 
-            %res = @known.map({ $_ => $smrObj.recommend([$_, ], $n, :!remove-history).take-value.Hash });
-
+            %res = @known.map({ $_ => $smrObj.recommend([$_, ], $n, :normalize, :!remove-history).take-value.Hash });
+            # From similarity to distance
+            %res .= map({ my $m = $_.value.values.max; $_.key => $_.value.map({ $_.key => $m - $_.value }).Hash });
         } else {
             for @known -> $word {
-                my @target = $h.column-at($word).dense-matrix.map(*.[0]);
+                my @target = $h.column-at($word).dense-matrix.map(*[0]);
                 my @distances;
                 for $h.column-names -> $term {
-                    my @vec = $h.column-at($term).dense-matrix.map(*.[0]);
-                    my $d = do if $method.lc eq 'cosine' {
-                        my $num = (@target Z* @vec).sum;
-                        my $den = sqrt((@target Z* @target).sum) * sqrt((@vec Z* @vec).sum);
-                        $den > 0 ?? 1 - $num / $den !! 1;
-                    } else {
-                        sqrt((@target Z- @vec).map(* ** 2).sum);
-                    }
+                    my @vec = $h.column-at($term).dense-matrix.map(*[0]);
+                    my $d = sqrt((@target Z- @vec).map(* ** 2).sum);
                     @distances.push($term => $d);
                 }
                 %res{$word} = @distances.sort(*.value).head($n + 1).Hash;
@@ -350,7 +344,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         my $res = $!value;
         if $as-data-frame {
             $res = $wide-form
-                    ?? $!value.map(-> $p { %(SearchTerm => $p.key, Terms => $p.value.keys.Array) }).Array
+                    ?? $!value.map(-> $p { %(SearchTerm => $p.key, Terms => $p.value.Array.sort(*.value)>>.key.Array) }).Array
                     !! $!value.map(-> $p { $p.value.kv.map(-> $term, $dist { %(SearchTerm => $p.key, Term => $term, TermDistance => $dist) }) }).flat.Array;
         }
         $!value = $res;
