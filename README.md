@@ -201,6 +201,20 @@ my $lsaObj = LatentSemanticAnalyzer.new.
 
 ------
 
+## Implementation details
+
+- The initial version was translated to Raku from the Python package ["LatentSemanticAnalyzer"](https://pypi.org/project/LatentSemanticAnalyzer/), [AAp3].
+  - See ["prompts.txt"](./docs/prompts.md).
+- Multiple changes of the initial translation had to be made:
+  - Proper use of the (fast) `Math::SparseMatrix::NativeAdapter` matrices 
+  - Proper topic extraction implementation (using SVD)
+  - Correct statistical thesaurus shaping
+  - Using "ML::SparseMatrixRecommender" for statistical thesaurus with Cosine distance
+  - Refactoring by moving multiple subs to `ML::LatentSemanticAnalyzer::Utilities`
+- Testing against Python and Mathematica implementations with the same data and parameters
+
+------
+
 ## References
 
 ### Articles
