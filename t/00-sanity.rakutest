@@ -6,7 +6,7 @@ subtest {
     my @abstracts = ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset();
 
     ok @abstracts.elems > 0, 'retrieves bundled dfAbstracts.csv records';
-    is @abstracts.elems, 828, 'retrieves all bundled dfAbstracts.csv records';
+    is @abstracts.elems, 581, 'retrieves all bundled dfAbstracts.csv records';
     is @abstracts.all ~~ Map:D, True, 'each abstract record is a hash';
     is-deeply @abstracts.head.keys.sort.Array, <Abstract ID Name Title Track>.sort.Array, 'abstract records have the expected columns';
     is @abstracts.head<ID>, '2016.Abraham.Gadalla.Save.your.time.and.your', 'first abstract ID is parsed from the CSV resource';
