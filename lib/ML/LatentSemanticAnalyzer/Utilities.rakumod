@@ -1,6 +1,7 @@
 use v6.d;
 
 use Math::SparseMatrix;
+use Lingua::StopwordsISO;
 
 unit module ML::LatentSemanticAnalyzer::Utilities;
 
@@ -8,16 +9,11 @@ my constant $DEFAULT-WORDS-PATTERN = rx/ <[\w']>+ | <[.,!?;]> /;
 
 our sub get-default-word-pattern() { $DEFAULT-WORDS-PATTERN }
 
-my @ENGLISH-STOP-WORDS = <
-        a about above after again against all am an and any are as at be because been before being below between
-        both but by can did do does doing down during each few for from further had has have having he her here hers
-        herself him himself his how i if in into is it its itself just me more most my myself no nor not now of off on
-        once only or other our ours ourselves out over own same she should so some such than that the their theirs
-        them themselves then there these they this those through to too under until up very was we were what when
-        where which while who whom why will with you your yours yourself yourselves
->;
 
-our sub get-english-stop-words() { @ENGLISH-STOP-WORDS }
+our sub get-english-stop-words() {
+    # Some double the work, since a set-hash is made with the stop words.
+    stopwords-iso('English').keys.sort
+}
 
 #==========================================================
 # Data retrieval
@@ -69,7 +65,7 @@ our sub is-hash-of-str-lists($x --> Bool) {
 
 our sub stop-words-set($stop-words) {
     given $stop-words {
-        when Bool:D { $_ ?? SetHash.new(@ENGLISH-STOP-WORDS) !! SetHash.new }
+        when Bool:D { $_ ?? SetHash.new(get-english-stop-words()) !! SetHash.new }
         when Positional:D { SetHash.new($_.Array) }
         when Set:D | SetHash:D { $_ }
         when Any { SetHash.new }
