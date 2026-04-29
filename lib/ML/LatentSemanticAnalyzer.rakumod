@@ -307,8 +307,8 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         my $res = %topics;
         if $dataset {
             $res = $wide-form
-                    ?? %topics.map(-> $p { %(Topic => $p.key, Terms => $p.value.keys.Array) }).Array
-                    !! %topics.map(-> $p { $p.value.kv.map(-> $term, $score { %(Topic => $p.key, Term => $term, Score => $score) }) }).flat(1).Array;
+                    ?? %topics.map(-> $p { %(Topic => $p.key, Terms => $p.value.keys.Array) }).sort(*<Topic>).Array
+                    !! %topics.map(-> $p { $p.value.kv.map(-> $term, $score { %(Topic => $p.key, Term => $term, Score => $score) }).sort(-*<Score>).Array }).flat(1).Array;
         }
         $!value = $res;
         &echo-function($res) if $echo;
@@ -319,8 +319,8 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     method echo-topics-table(|c) { self.echo-topics-interpretation(|c) }
 
     #| Echo topics interpretation
-    method echo-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$as-data-frame = True, Bool:D :$wide-form = False, :&echo-function = &say) {
-        self.get-topics-interpretation(:$number-of-terms, :$as-data-frame, :$wide-form, :echo, :&echo-function)
+    method echo-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$dataset = True, Bool:D :$wide-form = False, :&echo-function = &say) {
+        self.get-topics-interpretation(:$number-of-terms, :$dataset, :$wide-form, :echo, :&echo-function)
     }
 
     #| Extract statistical thesaurus for given terms
@@ -371,17 +371,17 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             :@terms = $!value,
             Int:D :$number-of-nearest-neighbors = 12,
             Str:D :$method = 'cosine',
-            Bool:D :$as-data-frame = True,
+            Bool:D :$dataset = True,
             Bool:D :$wide-form = False,
             Bool:D :$echo = True,
             :&echo-function = &say
             ) {
         self.extract-statistical-thesaurus(@terms, n => $number-of-nearest-neighbors, :$method);
         my $res = $!value;
-        if $as-data-frame {
+        if $dataset {
             $res = $wide-form
-                    ?? $!value.map(-> $p { %(SearchTerm => $p.key, Terms => $p.value.Array.sort(*.value)>>.key.Array) }).Array
-                    !! $!value.map(-> $p { $p.value.kv.map(-> $term, $dist { %(SearchTerm => $p.key, Term => $term, TermDistance => $dist) }) }).flat.Array;
+                    ?? $!value.map(-> $p { %(SearchTerm => $p.key, Terms => $p.value.Array.sort(*.value)>>.key.Array) }).sort(*<SearchTerm>).Array
+                    !! $!value.map(-> $p { $p.value.kv.map(-> $term, $dist { %(SearchTerm => $p.key, Term => $term, TermDistance => $dist).sort(*<TermDistance>) }) }).flat.Array;
         }
         $!value = $res;
         echo-function($res) if $echo;
