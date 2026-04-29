@@ -66,19 +66,19 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         die 'The first argument is expected to be a list of strings or a hash of strings.'
                 unless ML::LatentSemanticAnalyzer::Utilities::is-str-list($arg) || ML::LatentSemanticAnalyzer::Utilities::is-str-hash($arg);
         $!documents = $arg;
-        self
+        return self;
     }
 
     method set-document-term-matrix(Math::SparseMatrix:D $arg) {
         $!doc-term-mat = $arg;
         @!terms = $arg.column-names.Array;
-        self
+        return self;
     }
 
     method set-weighted-document-term-matrix(Math::SparseMatrix:D $arg) {
         $!weighted-doc-term-mat = $arg;
         @!terms = $arg.column-names.Array;
-        self
+        return self;
     }
 
     method set-global-term-weights($arg) { $!global-weights = $arg; self }
@@ -113,7 +113,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         $obj.set-normalizer-function($!normalizer-function);
         $obj.set-method($!method);
         $obj.set-value($!value);
-        $obj
+        return $obj;
     }
 
     #======================================================
@@ -294,7 +294,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }
         $!W = %nres<W>;
         $!H = %nres<H>;
-        self
+        return self;
     }
 
     #| Derive topics interpretation
@@ -312,7 +312,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }
         $!value = $res;
         &echo-function($res) if $echo;
-        self
+        return self;
     }
 
     #| Echo topics table
@@ -358,7 +358,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }
 
         $!value = %res;
-        self
+        return self;
     }
 
     #| Extract statistical thesaurus for given terms (all named arguments)
@@ -385,7 +385,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }
         $!value = $res;
         echo-function($res) if $echo;
-        self
+        return self;
     }
 
     #| Echo statistical thesaurus
@@ -426,7 +426,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
                 die 'Unknown type of the argument query.';
             }
         }
-        self
+        return self;
     }
 
     #| Represent a query by LSA object's topics
@@ -439,7 +439,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         die 'The obtained query matrix has no entries.' if $qmat.explicit-length == 0;
         self.normalize-matrix-product(:!normalize-left);
         $!value = $qmat.dot($!H.transpose);
-        self
+        return self;
     }
 
     #| Echo document-term matrix statistics
@@ -463,7 +463,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             say "\tmax:     {@x.max // 0}";
             say "\tstd:     {sqrt(variance(@x))}";
         }
-        self
+        return self;
     }
 
     #| Represent as hashmap
