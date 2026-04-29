@@ -23,7 +23,7 @@ srand(12);
 
 my &echo-function = {.say for |$_};
 
-my %stemming-rules = %docs.values.join(' ').lc.split(/\s | <:punct> /, :skip-empty)>>.trim.map({ $_ => porter($_) });
+my %stemming-rules = %docs.values.join(' ').lc.split(/\s | <:punct> /, :skip-empty)>>.trim.unique.map({ $_ => porter($_) });
 
 #.say for |%stemming-rules;
 
