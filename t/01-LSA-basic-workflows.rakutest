@@ -26,7 +26,7 @@ isa-ok $lsa.take-weighted-doc-term-mat, Math::SparseMatrix, 'creates a weighted 
 ok $lsa.take-doc-term-mat.rows-count > 570, 'document-term matrix has the expected document count';
 ok $lsa.take-doc-term-mat.columns-count > 2000, 'document-term matrix has the expected term count';
 
-ok $lsa.extract-topics(number-of-topics => 20, method => 'SVD', max-steps => 40),
+ok $lsa.extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 20, method => 'SVD', max-steps => 40, tolerance => 1e-4),
         'SVD topic extraction';
 dies-ok { $lsa.extract-topics(number-of-topics => 20, method => 'NNMF', max-steps => 5) },
         'NNMF topic extraction is explicitly unsupported';
