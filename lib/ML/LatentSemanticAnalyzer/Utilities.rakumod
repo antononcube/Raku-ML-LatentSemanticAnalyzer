@@ -4,7 +4,7 @@ use Math::SparseMatrix;
 
 unit module ML::LatentSemanticAnalyzer::Utilities;
 
-my constant $DEFAULT-WORDS-PATTERN = rx/<[A..Za..z0..9_']>+|<[.,!?;]>/;
+my constant $DEFAULT-WORDS-PATTERN = rx/ <[\w']>+ | <[.,!?;]> /;
 
 our sub get-default-word-pattern() { $DEFAULT-WORDS-PATTERN }
 
@@ -27,10 +27,10 @@ our sub get-english-stop-words() { @ENGLISH-STOP-WORDS }
 our sub get-abstracts-dataset() {
     my $fileResource = %?RESOURCES<dfAbstracts.csv>;
 
-    my @lines = slurp($fileResource).subst('"', :g).lines;
-    my @keys = @lines.head.split(',', :skip-empty).Array;
+    my @lines = slurp($fileResource).lines;
+    my @keys = @lines.head.subst('"', :g).split(',', :skip-empty).Array;
     my @tbl = do for @lines.tail(*-1).grep(*) -> $line {
-        (@keys Z=> $line.split(',', :skip-empty).Array).Hash
+        (@keys Z=> $line.subst(/ ^ '"' | '"' $/, :g).split('","', :skip-empty).Array).Hash
     }
     return @tbl;
 }
@@ -94,7 +94,6 @@ our sub stem-word(Str:D $word, $stemming-rules --> Str) {
         default { die 'The argument stemming-rules is expected to be a Boolean, Callable, Hash, or Nil.' }
     }
 }
-
 
 our sub diag-matrix(@values, @names --> Math::SparseMatrix:D) {
     my @rules = @values.kv.map(-> $i, $v { ($i, $i) => $v });
