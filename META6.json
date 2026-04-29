@@ -9,7 +9,8 @@
     "depends": [
         "Math::SparseMatrix:ver<0.0.14+>",
         "ML::SparseMatrixRecommender:ver<0.0.3+>",
-        "Lingua::EN::Stem::Porter"
+        "Lingua::EN::Stem::Porter",
+        "Lingua::StopwordsISO:ver<0.1.0+>"
     ],
     "build-depends": [],
     "provides": {
