@@ -21,6 +21,10 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     has $.method is rw;
     has $.value is rw;
 
+
+    #======================================================
+    # Creators
+    #======================================================
     multi method new() {
         self.bless
     }
@@ -34,6 +38,9 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }
     }
 
+    #======================================================
+    # Takers
+    #======================================================
     method take-documents() { $!documents }
     method take-document-term-matrix() { $!doc-term-mat }
     method take-doc-term-mat() { $!doc-term-mat }
@@ -51,6 +58,10 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     method take-method() { $!method }
     method take-value() { $!value }
 
+
+    #======================================================
+    # Setters
+    #======================================================
     method set-documents($arg) {
         die 'The first argument is expected to be a list of strings or a hash of strings.'
                 unless ML::LatentSemanticAnalyzer::Utilities::is-str-list($arg) || ML::LatentSemanticAnalyzer::Utilities::is-str-hash($arg);
@@ -82,6 +93,10 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     method set-words-pattern($arg) { $!words-pattern = $arg; self }
     method set-value($arg) { $!value = $arg; self }
 
+
+    #======================================================
+    # Clone
+    #======================================================
     method clone() {
         my $obj = ML::LatentSemanticAnalyzer.new;
         $obj.set-documents($!documents) if $!documents.defined;
@@ -101,7 +116,9 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         $obj
     }
 
-
+    #======================================================
+    # Generic subs
+    #======================================================
     sub left-normalize-matrix-product(Math::SparseMatrix:D $w, Math::SparseMatrix:D $h --> Hash:D) {
         my @d = $w.multiply($w).column-sums.map({ sqrt($_) });
         my @di = @d.map({ .abs > 0 ?? 1 / $_ !! 1 });
@@ -133,9 +150,21 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }).Hash
     }
 
+    # Five point summary subs
     sub mean(@x) { @x.elems ?? @x.sum / @x.elems !! 0 }
+    sub median(@x) {
+        given @x.elems {
+            when $_ == 0 { 0 }
+            when $_ == 1 { @x.head }
+            when $_ %% 2 { my @y = @x.sort; (@y[$_ div 2 - 1] + @y[$_ div 2]) / 2 }
+            default { my @y = @x.sort; @y[$_ div 2] }
+        }
+    }
     sub variance(@x) { @x.elems ?? @x.map({ ($_ - mean(@x)) ** 2 }).sum / @x.elems !! 0 }
 
+    #======================================================
+    # Main methods
+    #======================================================
     #| Make document-term matrix
     method make-document-term-matrix(
             :$docs = Nil,
@@ -251,6 +280,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         return self;
     }
 
+    #| Normalize matrix product
     method normalize-matrix-product(Bool:D :$normalize-left = True, Bool:D :$order-by-significance = True) {
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
         my %nres = $normalize-left ?? left-normalize-matrix-product($!W, $!H) !! right-normalize-matrix-product($!W, $!H);
@@ -267,6 +297,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         self
     }
 
+    #| Derive topics interpretation
     method get-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$as-data-frame = False, Bool:D :$wide-form = False, Bool:D :$echo = True, :&echo-function = &say) {
         die 'The argument number-of-terms is expected to be a positive integer.' unless $number-of-terms > 0;
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
@@ -284,12 +315,15 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         self
     }
 
+    #| Echo topics table
     method echo-topics-table(|c) { self.echo-topics-interpretation(|c) }
 
+    #| Echo topics interpretation
     method echo-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$as-data-frame = True, Bool:D :$wide-form = False, :&echo-function = &say) {
         self.get-topics-interpretation(:$number-of-terms, :$as-data-frame, :$wide-form, :echo, :&echo-function)
     }
 
+    #| Extract statistical thesaurus for given terms
     multi method extract-statistical-thesaurus(@terms, Int:D :$n = 12, Str:D :$method = 'euclidean') {
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
         my %fact-res = left-normalize-matrix-product($!W, $!H);
@@ -327,10 +361,12 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         self
     }
 
+    #| Extract statistical thesaurus for given terms (all named arguments)
     multi method extract-statistical-thesaurus(:@terms!, Int:D :$n = 12, Str:D :$method = 'euclidean') {
         self.extract-statistical-thesaurus(@terms, :$n, :$method)
     }
 
+    #| Derive statistical thesaurus
     method get-statistical-thesaurus(
             :@terms = $!value,
             Int:D :$number-of-nearest-neighbors = 12,
@@ -352,10 +388,12 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         self
     }
 
+    #| Echo statistical thesaurus
     method echo-statistical-thesaurus(|c) {
         self.get-statistical-thesaurus(|c, :echo)
     }
 
+    #| Represent a query by LSA object's terms
     method represent-by-terms($query, Bool:D :$apply-lsi-functions = True) {
         die 'Cannot find document-term matrix.' unless $!doc-term-mat ~~ Math::SparseMatrix:D || $!weighted-doc-term-mat ~~ Math::SparseMatrix:D;
         given $query {
@@ -391,6 +429,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         self
     }
 
+    #| Represent a query by LSA object's topics
     method represent-by-topics($query, Bool:D :$apply-lsi-functions = True, Str:D :$method = 'algebraic') {
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
         die 'The argument method is expected to be algebraic or recommendation.'
@@ -403,6 +442,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         self
     }
 
+    #| Echo document-term matrix statistics
     method echo-document-term-matrix-statistics(Real :$log-base = 0) {
         die 'There is no document-term matrix.' unless $!doc-term-mat ~~ Math::SparseMatrix:D;
         say 'Document-term matrix:';
@@ -419,12 +459,14 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             say "{$p.key}:";
             say "\tmin:     {@x.min // 0}";
             say "\tmean:    {mean(@x)}";
+            say "\tmedian:  {median(@x)}";
             say "\tmax:     {@x.max // 0}";
             say "\tstd:     {sqrt(variance(@x))}";
         }
         self
     }
 
+    #| Represent as hashmap
     method Hash(::?CLASS:D: --> Hash:D) {
         %(
                 matrices => %(doc-term-mat => $!doc-term-mat, weighted-doc-term-mat => $!weighted-doc-term-mat),
@@ -440,6 +482,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         )
     }
 
+    #| Gist
     multi method gist(::?CLASS:D: --> Str) {
         if $!doc-term-mat ~~ Math::SparseMatrix:D {
             "LatentSemanticAnalyzer object with {$!doc-term-mat.rows-count} documents and {$!doc-term-mat.columns-count} terms."
