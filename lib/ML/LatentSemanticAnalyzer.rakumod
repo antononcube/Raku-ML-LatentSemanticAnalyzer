@@ -64,7 +64,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     #======================================================
     method set-documents($arg) {
         die 'The first argument is expected to be a list of strings or a hash of strings.'
-                unless ML::LatentSemanticAnalyzer::Utilities::is-str-list($arg) || ML::LatentSemanticAnalyzer::Utilities::is-str-hash($arg);
+        unless ML::LatentSemanticAnalyzer::Utilities::is-str-list($arg) || ML::LatentSemanticAnalyzer::Utilities::is-str-hash($arg);
         $!documents = $arg;
         return self;
     }
@@ -219,10 +219,12 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
 
     #| Extract topics
     method extract-topics(
-            :$number-of-topics = 12,
-            :$min-number-of-documents-per-term = 12,
-            :$method is copy = Whatever,
-            :$max-steps = 100) {
+            :$number-of-topics = 12,                  #= Number of topics to extract
+            :$min-number-of-documents-per-term = 12,  #= Minimum number of documents per term
+            :$method is copy = Whatever,              #= Matrix factorization method, one of "NNMF", "SVD", or Whatever.
+            :$max-steps = 100,                        #= Maximum number steps for the matrix factorization routine.
+            :tol(:$tolerance) = 10e-6,                #= Numerical tolerance for the matrix factorization routine.
+                          ) {
         # Process $method
         if $method.isa(Whatever) { $method = 'SVD' }
 
@@ -246,7 +248,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             when $_ ~~ Str:D && $_.lc ∈ <svd singular-value-decomposition singularvaluedecomposition> {
                 my ($s, $v);
 
-                ($W, $s, $v) = $smat.svd($number-of-topics);
+                ($W, $s, $v) = $smat.svd($number-of-topics, :$max-steps, :$tolerance);
 
                 # Scale V with S (in order to get H)
                 $H = $s.dot($v.transpose);
@@ -298,7 +300,13 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     }
 
     #| Derive topics interpretation
-    method get-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$dataset = False, Bool:D :$wide-form = False, Bool:D :$echo = True, :&echo-function = &say) {
+    method get-topics-interpretation(
+            Int:D :$number-of-terms = 12,  #= Number of terms per topic.
+            Bool:D :$dataset = False,      #= Whether to return a dataset or not.
+            Bool:D :$wide-form = False,    #= Whether to return the dataset in wide form or not.
+            Bool:D :$echo = True,          #= Whether to echo the topics or not.
+            :&echo-function = &say,        #= A callable to echo with.
+                                     ) {
         die 'The argument $number-of-terms is expected to be a positive integer.' unless $number-of-terms > 0;
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
         my %topics = row-dictionaries($!H, :sort).map(-> $p {
@@ -319,12 +327,21 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     method echo-topics-table(|c) { self.echo-topics-interpretation(|c) }
 
     #| Echo topics interpretation
-    method echo-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$dataset = True, Bool:D :$wide-form = False, :&echo-function = &say) {
+    method echo-topics-interpretation(
+            Int:D :$number-of-terms = 12,  #= Number of terms per topic.
+            Bool:D :$dataset = False,      #= Whether to return a dataset or not.
+            Bool:D :$wide-form = False,    #= Whether to return the dataset in wide form or not.
+            :&echo-function = &say,        #= A callable to echo with.
+                                      ) {
         self.get-topics-interpretation(:$number-of-terms, :$dataset, :$wide-form, :echo, :&echo-function)
     }
 
     #| Extract statistical thesaurus for given terms
-    multi method extract-statistical-thesaurus(@terms, Int:D :$n = 12, Str:D :$method = 'euclidean') {
+    multi method extract-statistical-thesaurus(
+            @terms,                       #= Terms to find thesaurus entries for.
+            Int:D :$n = 12,               #= Number of nearest neighbors.
+            Str:D :$method = 'euclidean', #= Distance function to find nearest neighbors with.
+                                               ) {
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
         my %fact-res = left-normalize-matrix-product($!W, $!H);
         my $h = %fact-res<H>;
@@ -339,7 +356,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
 
             my $smrObj = ML::SparseMatrixRecommender.new
                     .create-from-matrices(%("Words" => $HLocal.transpose))
-                    .apply-term-weight-functions("None", "None","Cosine");
+                    .apply-term-weight-functions("None", "None", "Cosine");
 
             %res = @known.map({ $_ => $smrObj.recommend([$_, ], $n, :normalize, :!remove-history).take-value.Hash });
             # From similarity to distance
@@ -362,19 +379,23 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     }
 
     #| Extract statistical thesaurus for given terms (all named arguments)
-    multi method extract-statistical-thesaurus(:@terms!, Int:D :$n = 12, Str:D :$method = 'euclidean') {
+    multi method extract-statistical-thesaurus(
+            :@terms!,                     #= Terms to find thesaurus entries for.
+            Int:D :$n = 12,               #= Number of nearest neighbors.
+            Str:D :$method = 'euclidean', #= Distance function to find nearest neighbors with.
+                                               ) {
         self.extract-statistical-thesaurus(@terms, :$n, :$method)
     }
 
     #| Derive statistical thesaurus
     method get-statistical-thesaurus(
-            :@terms = $!value,
-            Int:D :$number-of-nearest-neighbors = 12,
-            Str:D :$method = 'cosine',
-            Bool:D :$dataset = True,
-            Bool:D :$wide-form = False,
-            Bool:D :$echo = True,
-            :&echo-function = &say
+            :@terms = $!value,                            #= Terms to find thesaurus entries for.
+            Int:D :n(:$number-of-nearest-neighbors) = 12, #= Number of nearest neighbors.
+            Str:D :$method = 'euclidean',                 #= Distance function to find nearest neighbors with.
+            Bool:D :$dataset = True,                      #= Whether to return a dataset or not.
+            Bool:D :$wide-form = False,                   #= Whether to return the dataset in wide form or not.
+            Bool:D :$echo = True,                         #= Whether to echo the topics or not.
+            :&echo-function = &say,                       #= A callable to echo with.
             ) {
         self.extract-statistical-thesaurus(@terms, n => $number-of-nearest-neighbors, :$method);
         my $res = $!value;
@@ -443,13 +464,15 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     }
 
     #| Echo document-term matrix statistics
-    method echo-document-term-matrix-statistics(Real :$log-base = 0) {
+    method echo-document-term-matrix-statistics(
+            Numeric:D :$log-base = 0, #= Logarithmic base applied to the matrix entries
+                                                ) {
         die 'There is no document-term matrix.' unless $!doc-term-mat ~~ Math::SparseMatrix:D;
         say 'Document-term matrix:';
         say $!doc-term-mat.gist;
 
-        my @row-counts = $!doc-term-mat.unitize.row-sums;
-        my @col-counts = $!doc-term-mat.unitize.column-sums;
+        my @row-counts = $!doc-term-mat.clone.unitize.row-sums;
+        my @col-counts = $!doc-term-mat.clone.unitize.column-sums;
         if $log-base > 0 {
             @row-counts = @row-counts.map({ $_ > 0 ?? log($_, $log-base) !! 0 });
             @col-counts = @col-counts.map({ $_ > 0 ?? log($_, $log-base) !! 0 });
