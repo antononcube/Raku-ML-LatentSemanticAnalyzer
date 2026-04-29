@@ -298,20 +298,20 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     }
 
     #| Derive topics interpretation
-    method get-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$as-data-frame = False, Bool:D :$wide-form = False, Bool:D :$echo = True, :&echo-function = &say) {
-        die 'The argument number-of-terms is expected to be a positive integer.' unless $number-of-terms > 0;
+    method get-topics-interpretation(Int:D :$number-of-terms = 12, Bool:D :$dataset = False, Bool:D :$wide-form = False, Bool:D :$echo = True, :&echo-function = &say) {
+        die 'The argument $number-of-terms is expected to be a positive integer.' unless $number-of-terms > 0;
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
         my %topics = row-dictionaries($!H, :sort).map(-> $p {
             $p.key => $p.value.sort({ $^b.value <=> $^a.value }).head($number-of-terms).Hash
         }).Hash;
         my $res = %topics;
-        if $as-data-frame {
+        if $dataset {
             $res = $wide-form
                     ?? %topics.map(-> $p { %(Topic => $p.key, Terms => $p.value.keys.Array) }).Array
                     !! %topics.map(-> $p { $p.value.kv.map(-> $term, $score { %(Topic => $p.key, Term => $term, Score => $score) }) }).flat(1).Array;
         }
         $!value = $res;
-        echo-function($res) if $echo;
+        &echo-function($res) if $echo;
         self
     }
 
