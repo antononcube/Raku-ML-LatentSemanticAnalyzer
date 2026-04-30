@@ -7,8 +7,8 @@
     ],
     "auth": "zef:antononcube",
     "depends": [
-        "Math::SparseMatrix:ver<0.0.14+>",
-        "ML::SparseMatrixRecommender:ver<0.0.3+>",
+        "Math::SparseMatrix:ver<0.0.15+>",
+        "ML::SparseMatrixRecommender:ver<0.0.4+>",
         "Lingua::EN::Stem::Porter",
         "Lingua::StopwordsISO:ver<0.1.0+>"
     ],
