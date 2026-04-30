@@ -420,12 +420,12 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         die 'Cannot find document-term matrix.' unless $!doc-term-mat ~~ Math::SparseMatrix:D || $!weighted-doc-term-mat ~~ Math::SparseMatrix:D;
         given $query {
             when Str:D {
-                return self.represent-by-terms([$_], :$apply-lsi-functions);
+                return self.represent-by-terms([$_,], :$apply-lsi-functions);
             }
-            when Positional:D {
+            when Positional:D | Seq:D {
                 my $qmat = ML::LatentSemanticAnalyzer.new
                         .make-document-term-matrix(
-                                docs => $_,
+                                docs => $_.List,
                                 stop-words => $!stop-words,
                                 stemming-rules => $!stemming-rules,
                                 words-pattern => $!words-pattern
@@ -439,7 +439,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
                 die 'The obtained query matrix has no entries.' if $qmat.explicit-length == 0;
                 if $apply-lsi-functions {
                     die 'Global, local, and normalizer weight functions must be available.'
-                            unless $!global-weights.defined && $!local-weight-function.defined && $!normalizer-function.defined;
+                    unless $!global-weights.defined && $!local-weight-function.defined && $!normalizer-function.defined;
                     $qmat = self.apply-lsi-weight-functions($qmat, $!global-weights, $!local-weight-function, $!normalizer-function);
                 }
                 $!value = $qmat;
@@ -455,7 +455,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     method represent-by-topics($query, Bool:D :$apply-lsi-functions = True, Str:D :$method = 'algebraic') {
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
         die 'The argument method is expected to be algebraic or recommendation.'
-                unless $method.lc ∈ <algebraic recommendation>;
+        unless $method.lc ∈ <algebraic recommendation>;
         my $qmat = self.represent-by-terms($query, :$apply-lsi-functions).take-value;
         $qmat = $qmat.impose-column-names($!H.column-names);
         die 'The obtained query matrix has no entries.' if $qmat.explicit-length == 0;
