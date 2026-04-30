@@ -211,7 +211,12 @@ my $lsaObj = LatentSemanticAnalyzer.new.
   - Correct statistical thesaurus shaping
   - Using "ML::SparseMatrixRecommender" for statistical thesaurus with Cosine distance
   - Refactoring by moving multiple subs to `ML::LatentSemanticAnalyzer::Utilities`
-- Testing against Python and Mathematica implementations with the same data and parameters
+  - Correct (simplistic) resources data ingestion
+  - Correct automatic topic names derivation
+  - Profiling and re-implementation of `impose-row-names` and `impose-column-names` in "Math::SparseMatrix"
+  - Fixing a bug "Math::SparseMatrix" related to LSI application using a global weights list
+  - (Other changes...) 
+- Testing against Python and Mathematica implementations with the same data and parameters.
 
 ------
 
