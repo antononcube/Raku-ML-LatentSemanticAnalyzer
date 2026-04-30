@@ -33,6 +33,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         my $obj = self.bless;
         given $arg {
             when Math::SparseMatrix:D { $obj.set-document-term-matrix($_) }
+            when Seq:D { $obj.set-documents($_.List) }
             when Positional:D | Associative:D { $obj.set-documents($_) }
             default { die 'The argument is expected to be documents or a Math::SparseMatrix object.' }
         }
@@ -63,7 +64,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     # Setters
     #======================================================
     method set-documents($arg) {
-        die 'The first argument is expected to be a list of strings or a hash of strings.'
+        die 'The first argument is expected to be a list of strings or a hashmap of strings.'
         unless ML::LatentSemanticAnalyzer::Utilities::is-str-list($arg) || ML::LatentSemanticAnalyzer::Utilities::is-str-hash($arg);
         $!documents = $arg;
         return self;
