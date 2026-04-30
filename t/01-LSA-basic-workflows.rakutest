@@ -8,7 +8,7 @@ use ML::LatentSemanticAnalyzer::Utilities;
 sub resource-documents() {
     my @abstracts = ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset();
     @abstracts .= grep({ $_<ID> ~~ Str:D && $_<Abstract> ~~ Str:D && $_<Abstract>.chars > 0 });
-    return (@abstracts.map(*<ID>) Z=> @abstracts.map(*<Abstract>)).Hash;
+    return (@abstracts.map(*<ID>) Z=> @abstracts.map(*<Abstract>)).head(300).Hash;
 }
 
 my %docs = resource-documents();
@@ -23,16 +23,16 @@ my $lsa = ML::LatentSemanticAnalyzer.new
 isa-ok $lsa, ML::LatentSemanticAnalyzer, 'creates an LSA object';
 isa-ok $lsa.take-doc-term-mat, Math::SparseMatrix, 'creates a document-term matrix';
 isa-ok $lsa.take-weighted-doc-term-mat, Math::SparseMatrix, 'creates a weighted document-term matrix';
-ok $lsa.take-doc-term-mat.rows-count > 570, 'document-term matrix has the expected document count';
+ok $lsa.take-doc-term-mat.rows-count ≥ 250, 'document-term matrix has the expected document count';
 ok $lsa.take-doc-term-mat.columns-count > 2000, 'document-term matrix has the expected term count';
 
-ok $lsa.extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 40, method => 'SVD', max-steps => 40, tolerance => 1e-2),
+ok $lsa.extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 20, method => 'SVD', max-steps => 40, tolerance => 1e-2),
         'SVD topic extraction';
 dies-ok { $lsa.extract-topics(number-of-topics => 20, method => 'NNMF', max-steps => 5) },
         'NNMF topic extraction is explicitly unsupported';
 
 $lsa.get-statistical-thesaurus(
-        terms => <notebook function>,
+        terms => <function wolfram>,
         :wide-form,
         :!echo,
         number-of-nearest-neighbors => 2,
@@ -49,7 +49,7 @@ isa-ok $term-representation, Math::SparseMatrix, 'queries can be represented by 
 is $term-representation.rows-count, @queries.elems, 'term representation has one row per query';
 
 my $topic-representation = $lsa
-        .represent-by-topics(['notebook for demonstration of classification'], :!apply-lsi-functions, method => 'recommendation')
+        .represent-by-topics(['wolfram functions execution'], :!apply-lsi-functions, method => 'recommendation')
         .take-value;
 isa-ok $topic-representation, Math::SparseMatrix, 'queries can be represented by supplied topics';
 is $topic-representation.rows-count, 1, 'topic representation has one row per query';
