@@ -22,14 +22,18 @@
     ],
     "license": "Artistic-2.0",
     "tags": [
+        "dimension reduction",
+        "latent semantic analysis",
+        "linear algebra",
+        "lsa",
         "math",
         "mathematics",
         "matrix",
+        "singular value decomposition",
         "sparse matrix algebra",
         "sparse matrix",
         "sparse",
-        "latent semantic analysis",
-        "lsa"
+        "svd"
     ],
     "api": "0",
     "source-url": "https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer.git"
