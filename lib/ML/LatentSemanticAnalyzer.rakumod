@@ -271,7 +271,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }
 
         # Automatic topic names re-do using top 3 words per topic
-        @topic-names = (^@topic-names.elems).kv.map(-> $i, $tn { @topic-names[$i] ~ $H[$i].top-k-elements-matrix(3).rules(:names).sort(-*.value)».key».tail.join('-') });
+        @topic-names = (^@topic-names.elems).kv.map(-> $i, $tn { @topic-names[$i] ~ '.' ~ $H[$i].top-k-elements-matrix(3).rules(:names).sort(-*.value)».key».tail.join('-') });
 
         $W.set-column-names(@topic-names);
         $W.set-row-names($smat.row-names);
@@ -316,7 +316,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         my $res = %topics;
         if $dataset {
             $res = $wide-form
-                    ?? %topics.map(-> $p { %(Topic => $p.key, Terms => $p.value.keys.Array) }).sort(*<Topic>).Array
+                    ?? %topics.map(-> $p { %(Topic => $p.key, Terms => $p.value.sort(-*.value)>>.key.Array) }).sort(*<Topic>).Array
                     !! %topics.map(-> $p { $p.value.kv.map(-> $term, $score { %(Topic => $p.key, Term => $term, Score => $score) }).sort(-*<Score>).Array }).flat(1).Array;
         }
         $!value = $res;
