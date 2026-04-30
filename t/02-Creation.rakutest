@@ -13,32 +13,64 @@ sub resource-documents() {
 
 my %docs = resource-documents();
 
-my $lsa1 = ML::LatentSemanticAnalyzer.new
-        .make-document-term-matrix(docs => %docs, :stop-words, :stemming-rules, :3min-length)
-        .apply-term-weight-functions(
+## 1
+subtest {
+    my $lsa1 = ML::LatentSemanticAnalyzer.new
+            .make-document-term-matrix(docs => %docs, :stop-words, :stemming-rules, :3min-length)
+            .apply-term-weight-functions(
                 global-weight-func => 'IDF',
                 local-weight-func => 'None',
                 normalizer-func => 'Cosine'
-        );
+            );
 
-isa-ok $lsa1, ML::LatentSemanticAnalyzer, 'creates an LSA object from method documents';
-isa-ok $lsa1.take-doc-term-mat, Math::SparseMatrix, 'method creation sets a document-term matrix';
-isa-ok $lsa1.take-weighted-doc-term-mat, Math::SparseMatrix, 'method creation sets a weighted document-term matrix';
-ok $lsa1.take-doc-term-mat.rows-count > 570, 'method-created matrix has the expected document count';
-ok $lsa1.take-doc-term-mat.columns-count > 2000, 'method-created matrix has the expected term count';
+    isa-ok $lsa1, ML::LatentSemanticAnalyzer, 'creates an LSA object from method documents';
+    isa-ok $lsa1.take-doc-term-mat, Math::SparseMatrix, 'method creation sets a document-term matrix';
+    isa-ok $lsa1.take-weighted-doc-term-mat, Math::SparseMatrix, 'method creation sets a weighted document-term matrix';
+    ok $lsa1.take-doc-term-mat.rows-count > 570, 'method-created matrix has the expected document count';
+    ok $lsa1.take-doc-term-mat.columns-count > 2000, 'method-created matrix has the expected term count';
+    my $m = $lsa1.take-document-term-matrix;
+    is $m.row-names.sort, %docs.keys.sort, 'expected row names';
 
-my $lsa2 = ML::LatentSemanticAnalyzer.new(%docs)
-        .make-document-term-matrix(:stop-words, :stemming-rules, :3min-length)
-        .apply-term-weight-functions(
+}, 'Object creation without documents hashmap';
+
+## 2
+subtest {
+    my $lsa2 = ML::LatentSemanticAnalyzer.new(%docs)
+            .make-document-term-matrix(:stop-words, :stemming-rules, :3min-length)
+            .apply-term-weight-functions(
                 global-weight-func => 'IDF',
                 local-weight-func => 'None',
                 normalizer-func => 'Cosine'
-        );
+            );
 
-isa-ok $lsa2, ML::LatentSemanticAnalyzer, 'creates an LSA object from constructor documents';
-isa-ok $lsa2.take-doc-term-mat, Math::SparseMatrix, 'constructor creation sets a document-term matrix';
-isa-ok $lsa2.take-weighted-doc-term-mat, Math::SparseMatrix, 'constructor creation sets a weighted document-term matrix';
-ok $lsa2.take-doc-term-mat.rows-count > 570, 'constructor-created matrix has the expected document count';
-ok $lsa2.take-doc-term-mat.columns-count > 2000, 'constructor-created matrix has the expected term count';
+    isa-ok $lsa2, ML::LatentSemanticAnalyzer, 'creates an LSA object from constructor documents';
+    isa-ok $lsa2.take-doc-term-mat, Math::SparseMatrix, 'constructor creation sets a document-term matrix';
+    isa-ok $lsa2.take-weighted-doc-term-mat, Math::SparseMatrix, 'constructor creation sets a weighted document-term matrix';
+    ok $lsa2.take-doc-term-mat.rows-count > 570, 'constructor-created matrix has the expected document count';
+    ok $lsa2.take-doc-term-mat.columns-count > 2000, 'constructor-created matrix has the expected term count';
+    my $m = $lsa2.take-document-term-matrix;
+    is $m.row-names.sort, %docs.keys.sort, 'expected row names';
+
+}, 'Creation with documents hashmap';
+
+## 3
+subtest {
+    my $lsa3 = ML::LatentSemanticAnalyzer.new(%docs.values)
+            .make-document-term-matrix(:stop-words, :stemming-rules, :3min-length)
+            .apply-term-weight-functions(
+                global-weight-func => 'IDF',
+                local-weight-func => 'None',
+                normalizer-func => 'Cosine'
+            );
+
+    isa-ok $lsa3, ML::LatentSemanticAnalyzer, 'creates an LSA object from constructor documents';
+    isa-ok $lsa3.take-doc-term-mat, Math::SparseMatrix, 'constructor creation sets a document-term matrix';
+    isa-ok $lsa3.take-weighted-doc-term-mat, Math::SparseMatrix, 'constructor creation sets a weighted document-term matrix';
+    ok $lsa3.take-doc-term-mat.rows-count > 570, 'constructor-created matrix has the expected document count';
+    ok $lsa3.take-doc-term-mat.columns-count > 2000, 'constructor-created matrix has the expected term count';
+    my $m = $lsa3.take-document-term-matrix;
+    is $m.row-names, (^$m.elems).map({ 'id.' ~ $_ }).List, 'expected row names';
+
+}, 'Creation with documents list';
 
 done-testing;
