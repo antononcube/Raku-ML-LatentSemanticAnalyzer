@@ -223,7 +223,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             :$number-of-topics = 12,                  #= Number of topics to extract
             :$min-number-of-documents-per-term = 12,  #= Minimum number of documents per term
             :$method is copy = Whatever,              #= Matrix factorization method, one of "NNMF", "SVD", or Whatever.
-            :$max-steps = 100,                        #= Maximum number steps for the matrix factorization routine.
+            :$max-steps = Whatever,                   #= Maximum number steps for the matrix factorization routine.
             :tol(:$tolerance) = 10e-6,                #= Numerical tolerance for the matrix factorization routine.
                           ) {
         # Process $method
