@@ -271,7 +271,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         }
 
         # Automatic topic names re-do using top 3 words per topic
-        # TBD
+        @topic-names = (^@topic-names.elems).kv.map(-> $i, $tn { @topic-names[$i] ~ $H[$i].top-k-elements-matrix(3).rules(:names).sort(-*.value)».key».tail.join('-') });
 
         $W.set-column-names(@topic-names);
         $W.set-row-names($smat.row-names);
