@@ -1,0 +1,30 @@
+use v6.d;
+
+use Test;
+use Math::SparseMatrix;
+use ML::LatentSemanticAnalyzer;
+
+sub resource-documents() {
+    my @abstracts = ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset();
+    @abstracts .= grep({ $_<ID> ~~ Str:D && $_<Abstract> ~~ Str:D && $_<Abstract>.chars > 0 });
+    return (@abstracts.map(*<ID>) Z=> @abstracts.map(*<Abstract>)).Hash;
+}
+
+my %docs = resource-documents();
+my $lsa = ML::LatentSemanticAnalyzer.new
+        .make-document-term-matrix(docs => %docs, :stop-words, :stemming-rules, :3min-length)
+        .apply-term-weight-functions(
+            global-weight-func => 'IDF',
+            local-weight-func => 'None',
+            normalizer-func => 'Cosine'
+        );
+
+my $query = q:to/END/;
+Wolfram notebooks have been copied by other computational systems.
+END
+
+ok $lsa.represent-by-terms($query, :!apply-lsi-functions);
+
+isa-ok $lsa.represent-by-terms($query, :!apply-lsi-functions).take-value, Math::SparseMatrix:D;
+
+done-testing;
