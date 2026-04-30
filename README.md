@@ -1,5 +1,12 @@
 # Latent Semantic Analysis (LSA) package 
 
+[![Actions Status](https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer/actions/workflows/linux.yml/badge.svg)](https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer/actions)
+[![Actions Status](https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer/actions/workflows/macos.yml/badge.svg)](https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer/actions)
+[![Actions Status](https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer/actions/workflows/windows.yml/badge.svg)](https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer/actions)
+
+[![](https://raku.land/zef:antononcube/ML::LatentSemanticAnalyzer/badges/version)](https://raku.land/zef:antononcube/ML::LatentSemanticAnalyzer)
+[![License: Artistic-2.0](https://img.shields.io/badge/License-Artistic%202.0-0298c3.svg)](https://opensource.org/licenses/Artistic-2.0)
+
 ## In brief
 
 This Raku package, "ML::LatentSemanticAnalyzer", has different functions for computations of
@@ -266,7 +273,7 @@ my $lsaObj = LatentSemanticAnalyzer.new.
 [GitHub/antononcube](https://github.com/antononcube).
 
 [AAp6] Anton Antonov,
-[ML::SparseMatrixRecommender, Raku package](https://github.com/antononcube/Raku-ML-SparseMatrixRecommender),
+[ML::SparseMatrixRecommender, Raku package](https://github.com/antononcube/Raku-ML-LatentSemanticAnalyzer),
 (2025),
 [GitHub/antononcube](https://github.com/antononcube).
 
