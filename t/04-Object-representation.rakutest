@@ -1,0 +1,79 @@
+use v6.d;
+
+use Test;
+use Math::SparseMatrix;
+use ML::LatentSemanticAnalyzer;
+
+sub small-lsa() {
+    my %docs =
+            d1 => 'notebook differential equations',
+            d2 => 'neural networking training',
+            d3 => 'time series anomaly';
+
+    ML::LatentSemanticAnalyzer.new
+            .make-document-term-matrix(docs => %docs, :1min-length)
+            .apply-term-weight-functions(
+                    global-weight-func => 'IDF',
+                    local-weight-func => 'None',
+                    normalizer-func => 'Cosine'
+            )
+}
+
+sub factorized-lsa() {
+    my %docs =
+            d1 => 'apple banana',
+            d2 => 'banana carrot';
+    my $w = Math::SparseMatrix.new(
+            dense-matrix => [[1, 0], [0, 2]],
+            row-names => <d1 d2>,
+            column-names => <t1 t2>
+    ).to-adapted;
+    my $h = Math::SparseMatrix.new(
+            dense-matrix => [[3, 1, 0], [0, 2, 4]],
+            row-names => <t1 t2>,
+            column-names => <apple banana carrot>
+    ).to-adapted;
+    ML::LatentSemanticAnalyzer.new
+            .make-document-term-matrix(docs => %docs, :1min-length)
+            .apply-term-weight-functions(
+                    global-weight-func => 'IDF',
+                    local-weight-func => 'None',
+                    normalizer-func => 'Cosine'
+            )
+            .set-w($w)
+            .set-h($h)
+            .set-method('SVD')
+}
+
+my $lsa = small-lsa();
+my @queries = 'Notebook of differential equations solutions.',
+        'Neural networking training process',
+        'Anomaly finding in time series';
+
+my %lsa-hash = $lsa.Hash;
+ok(<matrices W H stemming-rules stop-words>.map({ %lsa-hash{$_}:exists }).all,
+        'to-hash produces an LSA hash representation');
+
+my $clone = $lsa.clone;
+my $recs1 = $lsa.represent-by-terms(@queries, :!apply-lsi-functions).take-value;
+my $recs2 = $clone.represent-by-terms(@queries, :!apply-lsi-functions).take-value;
+
+isa-ok $recs1, Math::SparseMatrix, 'original object represents queries by terms';
+isa-ok $recs2, Math::SparseMatrix, 'cloned object represents queries by terms';
+is-deeply $recs1.dense-matrix, $recs2.dense-matrix, 'clone preserves term representations';
+
+my $factorized = factorized-lsa();
+my $topic-recs1 = $factorized
+        .represent-by-topics(['apple banana'], :!apply-lsi-functions, method => 'recommendation')
+        .take-value;
+my $topic-recs2 = $factorized.clone
+        .represent-by-topics(['apple banana'], :!apply-lsi-functions, method => 'recommendation')
+        .take-value;
+
+isa-ok $topic-recs1, Math::SparseMatrix, 'original object represents queries by topics';
+isa-ok $topic-recs2, Math::SparseMatrix, 'cloned object represents queries by topics';
+for $topic-recs1.dense-matrix[0].kv -> $i, $value {
+    is-approx $value, $topic-recs2.dense-matrix[0][$i], "clone preserves topic score $i with supplied factors";
+}
+
+done-testing;
