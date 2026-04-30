@@ -27,4 +27,6 @@ ok $lsa.represent-by-terms($query, :!apply-lsi-functions);
 
 isa-ok $lsa.represent-by-terms($query, :!apply-lsi-functions).take-value, Math::SparseMatrix:D;
 
+ok $lsa.represent-by-terms($query.words, :apply-lsi-functions);
+
 done-testing;
