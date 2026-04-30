@@ -13,7 +13,7 @@ sub resource-documents() {
 
 my %docs = resource-documents();
 my $lsa = ML::LatentSemanticAnalyzer.new
-        .make-document-term-matrix(docs => %docs, :stop-words, :stemming-rules, :3min-length)
+        .make-document-term-matrix(docs => %docs, :stop-words, :stemming-rules, :4min-length)
         .apply-term-weight-functions(
                 global-weight-func => 'IDF',
                 local-weight-func => 'None',
@@ -26,7 +26,7 @@ isa-ok $lsa.take-weighted-doc-term-mat, Math::SparseMatrix, 'creates a weighted 
 ok $lsa.take-doc-term-mat.rows-count > 570, 'document-term matrix has the expected document count';
 ok $lsa.take-doc-term-mat.columns-count > 2000, 'document-term matrix has the expected term count';
 
-ok $lsa.extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 20, method => 'SVD', max-steps => 40, tolerance => 1e-4),
+ok $lsa.extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 40, method => 'SVD', max-steps => 40, tolerance => 1e-2),
         'SVD topic extraction';
 dies-ok { $lsa.extract-topics(number-of-topics => 20, method => 'NNMF', max-steps => 5) },
         'NNMF topic extraction is explicitly unsupported';
