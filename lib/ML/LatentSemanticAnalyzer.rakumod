@@ -121,22 +121,22 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     # Generic subs
     #======================================================
     sub left-normalize-matrix-product(Math::SparseMatrix:D $w, Math::SparseMatrix:D $h --> Hash:D) {
-        my @d = $w.multiply($w).column-sums.map({ sqrt($_) });
-        my @di = @d.map({ .abs > 0 ?? 1 / $_ !! 1 });
+        my @d = $w.multiply($w).column-sums>>.sqrt;
+        my @di = @d.map({ $_.abs > 0 ?? 1 / $_ !! 1 });
         my $s = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@d, $h.row-names);
         my $si = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@di, $h.row-names);
         my $W = $w.dot($si);
-        $W .= set-column-names($w.column-names);
+        $W.set-column-names($w.column-names);
         return %(:$W, H => $s.dot($h))
     }
 
     sub right-normalize-matrix-product(Math::SparseMatrix:D $w, Math::SparseMatrix:D $h --> Hash:D) {
-        my @d = $h.multiply($h).row-sums.map({ sqrt($_) });
-        my @di = @d.map({ .abs > 0 ?? 1 / $_ !! 1 });
+        my @d = $h.multiply($h).row-sums>>.sqrt;
+        my @di = @d.map({ $_.abs > 0 ?? 1 / $_ !! 1 });
         my $s = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@d, $h.row-names);
         my $si = ML::LatentSemanticAnalyzer::Utilities::diag-matrix(@di, $h.row-names);
         my $W = $w.dot($s);
-        $W .= set-column-names($w.column-names);
+        $W.set-column-names($w.column-names);
         return %(:$W, H => $si.dot($h))
     }
 
@@ -459,7 +459,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         my $qmat = self.represent-by-terms($query, :$apply-lsi-functions).take-value;
         $qmat = $qmat.impose-column-names($!H.column-names);
         die 'The obtained query matrix has no entries.' if $qmat.explicit-length == 0;
-        self.normalize-matrix-product(:!normalize-left);
+        self.normalize-matrix-product(:!normalize-left, :!order-by-significance);
         $!value = $qmat.dot($!H.transpose);
         return self;
     }
