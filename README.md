@@ -193,17 +193,17 @@ Here is Command Line Interface (CLI) invocation example that generate code for t
 
 Here is an example using the NLP Template Engine, [AAr2, AAv3, AAp9]:
 
-```mathematica
-concretize("create from aDocs; apply LSI functions IDF, None, Cosine; extract 20 topics; show topics table", "TargetLanguage" -> "Raku")
-(* 
-my $lsaObj = LatentSemanticAnalyzer.new.
-          .make-document-term-matrix(docs => aDocs, stop-words => Whatever, stemming-rules = Whatever, min-length => 3)
-          .apply-term-weight-functions(global-weight-func => 'IDF', local-weight-func => 'None',normalizer-func => 'Cosine')
-          .extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 20, method => 'SVD')
-          .echo-topics-interpretation(number-of-terms => 10, :wide-form)
-          .echo-statistical-thesaurus(terms=["topics table"], :wide-form, number-of-nearest-neighbors => 12, method => 'cosine')
-*)
+```raku
+concretize('create from aDocs; apply LSI functions IDF, None, Cosine; extract 20 topics; show topics table.', 'target-language' => "Raku")
+```
 
+```
+# my $lsaObj = LatentSemanticAnalyzer.new(aDocs).
+#           .make-document-term-matrix(docs => aDocs, stop-words => Whatever, stemming-rules => Whatever, min-length => 3)
+#           .apply-term-weight-functions(global-weight-func => 'IDF', local-weight-func => 'None',normalizer-func => 'Cosine')
+#           .extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 20, method => 'SVD')
+#           .echo-topics-interpretation(number-of-terms => 10, :dataset, :wide-form)
+#           .echo-statistical-thesaurus(terms=["topics table"], :dataset, :wide-form, number-of-nearest-neighbors => 12, method => 'cosine')
 ```
 
 ------
