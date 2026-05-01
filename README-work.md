@@ -187,12 +187,6 @@ Here is Command Line Interface (CLI) invocation example that generate code for t
 ```shell
 dsl-translation -t=Raku 'create from aDocs; apply LSI functions IDF, None, Cosine; extract 20 topics; show topics table'
 ```
-```
-# ML::LatentSemanticAnalyzer.new(aDocs)
-# .apply-term-weight-functions(global-weight-func => "IDF", local-weight-func => "None", normalizer-func => "Cosine")
-# .extract-topics(number-of-topics => 20)
-# .echo-topics-table( )
-```
 
 ### NLP Template Engine
 
@@ -201,23 +195,6 @@ Here is an example using the NLP Template Engine, [AAr2, AAv3, AAp9]:
 ```raku
 use ML::NLPTemplateEngine;
 concretize('create from aDocs; apply LSI functions IDF, None, Cosine; extract 20 topics; show topics table; thesaurus for bell and ringer.', lang => "Raku")
-```
-```
-# my $lsaObj = ML::LatentSemanticAnalyzer.new
-# .make-document-term-matrix(docs=>aDocs,
-#                            stop-words=>Whatever,
-#                            stemming-rules=>Whatever,
-#                            min-length=>3)
-# .apply-term-weight-functions(global-weight-func=>"IDF",
-# 						   local-weight-func=>"None",
-# 						   normalizer-func=>"Cosine")
-# .extract-topics(number-of-topics=>20, min-number-of-documents-per-term=>20, method=>"LSI", max-steps=>16)
-# .echo-topics-interpretation(number-of-terms=>10, wide-form=>True)
-# .echo-statistical-thesaurus(terms=>["bell", "ringer"],
-# 						  wide-form=>True,
-# 						  number-of-nearest-neighbors=>12,
-# 						  method=>"cosine",
-# 						  echo-function=>&put)
 ```
 
 ------
