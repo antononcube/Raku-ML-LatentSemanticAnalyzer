@@ -98,10 +98,18 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     #======================================================
     # Echoing methods (generic)
     #======================================================
-    method echo-value(:l(:$label)='') { say "{$label}{$!value}" }
-    method echo-function-value(&f, :l(:$label)='') { say "{$label}{&f($!value)}" }
-    method echo-context(:l(:$label)='') { say "{$label}{self.Hash}" }
-    method echo-function-context(&f, :l(:$label)='') { say "{$label}{&f(self.Hash)}" }
+    method echo-value(:l(:$label)='', :&echo-function = &say) {
+        &echo-function("{$label}{$!value}"); self
+    }
+    method echo-function-value(&f = { $_.gist }, :l(:$label)='', :&echo-function = &say) {
+        &echo-function("{$label}{&f($!value)}"); self
+    }
+    method echo-context(:l(:$label)='', :&echo-function = &say) {
+        &echo-function("{$label}{self.Hash}"); self
+    }
+    method echo-function-context(&f = { $_.gist }, :l(:$label)='', :&echo-function = &say) {
+        &echo-function("{$label}{&f(self.Hash)}"); self
+    }
 
     #======================================================
     # Clone
