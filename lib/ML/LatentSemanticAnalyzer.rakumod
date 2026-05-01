@@ -58,6 +58,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     method take-normalizer-function() { $!normalizer-function }
     method take-method() { $!method }
     method take-value() { $!value }
+    method take-context() { self.Hash }
 
 
     #======================================================
@@ -94,6 +95,13 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
     method set-words-pattern($arg) { $!words-pattern = $arg; self }
     method set-value($arg) { $!value = $arg; self }
 
+    #======================================================
+    # Echoing methods (generic)
+    #======================================================
+    method echo-value(:l(:$label)='') { say "{$label}{$!value}" }
+    method echo-function-value(&f, :l(:$label)='') { say "{$label}{&f($!value)}" }
+    method echo-context(:l(:$label)='') { say "{$label}{self.Hash}" }
+    method echo-function-context(&f, :l(:$label)='') { say "{$label}{&f(self.Hash)}" }
 
     #======================================================
     # Clone
