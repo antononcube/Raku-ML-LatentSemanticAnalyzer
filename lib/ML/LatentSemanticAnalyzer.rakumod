@@ -397,7 +397,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
 
     #| Extract statistical thesaurus for given terms (all named arguments)
     multi method extract-statistical-thesaurus(
-            :@terms!,                     #= Terms to find thesaurus entries for.
+            :words(:@terms)!,             #= Terms to find thesaurus entries for.
             Int:D :$n = 12,               #= Number of nearest neighbors.
             Str:D :$method = 'euclidean', #= Distance function to find nearest neighbors with.
                                                ) {
@@ -406,7 +406,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
 
     #| Derive statistical thesaurus
     method get-statistical-thesaurus(
-            :@terms = $!value,                            #= Terms to find thesaurus entries for.
+            :words(:@terms) = $!value,                    #= Terms to find thesaurus entries for.
             Int:D :n(:$number-of-nearest-neighbors) = 12, #= Number of nearest neighbors.
             Str:D :$method = 'euclidean',                 #= Distance function to find nearest neighbors with.
             Bool:D :$dataset = True,                      #= Whether to return a dataset or not.
