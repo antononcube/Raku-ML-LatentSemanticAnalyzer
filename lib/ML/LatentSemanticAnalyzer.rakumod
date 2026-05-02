@@ -177,7 +177,12 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             default { my @y = @x.sort; @y[$_ div 2] }
         }
     }
-    sub variance(@x) { @x.elems ?? @x.map({ ($_ - mean(@x)) ** 2 }).sum / @x.elems !! 0 }
+    sub variance(@x) {
+        if @x.elems {
+            my $m = mean(@x);
+            @x.map({ ($_ - $m) ** 2 }).sum / @x.elems
+        } else { 0 }
+    }
 
     #======================================================
     # Main methods
@@ -490,13 +495,14 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         say 'Document-term matrix:';
         say $!doc-term-mat.gist;
 
-        my @row-counts = $!doc-term-mat.clone.unitize.row-sums;
-        my @col-counts = $!doc-term-mat.clone.unitize.column-sums;
+        my $smat01 = $!doc-term-mat.clone.unitize;
+        my @row-counts = $smat01.row-sums;
+        my @col-counts = $smat01.column-sums;
         if $log-base > 0 {
             @row-counts = @row-counts.map({ $_ > 0 ?? log($_, $log-base) !! 0 });
             @col-counts = @col-counts.map({ $_ > 0 ?? log($_, $log-base) !! 0 });
         }
-        for 'Number of terms per document' => @row-counts, 'Number of documents per term' => @col-counts -> $p {
+        for ['Number of terms per document' => @row-counts, 'Number of documents per term' => @col-counts] -> $p {
             my @x = $p.value;
             say "{$p.key}:";
             say "\tmin:     {@x.min // 0}";
