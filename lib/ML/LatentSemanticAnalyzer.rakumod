@@ -355,9 +355,9 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
 
     #| Extract statistical thesaurus for given terms
     multi method extract-statistical-thesaurus(
-            @terms,                       #= Terms to find thesaurus entries for.
-            Int:D :$n = 12,               #= Number of nearest neighbors.
-            Str:D :$method = 'euclidean', #= Distance function to find nearest neighbors with.
+            @terms,                                           #= Terms to find thesaurus entries for.
+            Int:D :$n = 12,                                   #= Number of nearest neighbors.
+            Str:D :distance-function(:$method) = 'euclidean', #= Distance function to find nearest neighbors with.
                                                ) {
         die 'Cannot find matrix factors.' unless $!W ~~ Math::SparseMatrix:D && $!H ~~ Math::SparseMatrix:D;
         my %fact-res = left-normalize-matrix-product($!W, $!H);
@@ -366,7 +366,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         die 'None of the given words are known.' unless @known;
 
         my %res;
-        if $method.lc eq 'cosine' {
+        if $method.lc ∈ <cosine cosine-distance cosinedistance> {
             my $HLocal = Math::SparseMatrix.new(self.take-h.core-matrix.to-csr);
             $HLocal.set-row-names(self.take-h.row-names);
             $HLocal.set-column-names(self.take-h.column-names);
@@ -378,7 +378,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
             %res = @known.map({ $_ => $smrObj.recommend([$_, ], $n, :normalize, :!remove-history).take-value.Hash });
             # From similarity to distance
             %res .= map({ my $m = $_.value.values.max; $_.key => $_.value.map({ $_.key => $m - $_.value }).Hash });
-        } else {
+        } elsif $method.lc ∈ <euclidean euclidean-distance euclideandistance> {
             for @known -> $word {
                 my @target = $h.column-at($word).dense-matrix.map(*[0]);
                 my @distances;
@@ -389,6 +389,8 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
                 }
                 %res{$word} = @distances.sort(*.value).head($n + 1).Hash;
             }
+        } else {
+            die 'Unknown method; the method is expected to be one of "cosine-distance" or "euclidean-distance".'
         }
 
         $!value = %res;
