@@ -337,7 +337,7 @@ class ML::LatentSemanticAnalyzer does ML::SparseMatrixRecommender::DocumentTermW
         my $res = %topics;
         if $dataset {
             $res = $wide-form
-                    ?? %topics.map(-> $p { %(Topic => $p.key, Terms => $p.value.sort(-*.value)>>.key.Array) }).sort(*<Topic>).Array
+                    ?? %topics.map(-> $p { %(Topic => $p.key, |( (^$p.value.elems)>>.Str Z=> $p.value.sort(-*.value)>>.key.Array ) ) }).sort(*<Topic>).Array
                     !! %topics.map(-> $p { $p.value.kv.map(-> $term, $score { %(Topic => $p.key, Term => $term, Score => $score) }).sort(-*<Score>).Array }).flat(1).Array;
         }
         $!value = $res;
