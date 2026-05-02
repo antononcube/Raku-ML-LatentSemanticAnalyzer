@@ -1,7 +1,7 @@
 {
     "name": "ML::LatentSemanticAnalyzer",
     "description": "Package for Latent Semantic Analysis (LSA) computations.",
-    "version": "0.0.2",
+    "version": "0.0.3",
     "authors": [
         "Anton Antonov"
     ],
