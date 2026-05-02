@@ -23,17 +23,22 @@ srand(12);
 
 my &echo-function = {.say for |$_};
 
+my $tStart = now;
 my %stemming-rules = %docs.values.join(' ').lc.split(/\s | <:punct> /, :skip-empty)>>.trim.unique.map({ $_ => porter($_) });
+my $tEnd = now;
+say "time to compute stemming rules : {$tEnd - $tStart}";
 
 #.say for |%stemming-rules;
 
 # LSA pipeline
+$tStart = now;
 my $lsaObj =
         ML::LatentSemanticAnalyzer.new
                 .make-document-term-matrix(docs => %docs, :stop-words, :%stemming-rules, :3min-length)
                 .apply-term-weight-functions(global-weight-func => "IDF", local-weight-func => "None", normalizer-func => "Cosine")
                 .extract-topics(:40number-of-topics, :10min-number-of-documents-per-term, method => "SVD")
-                .echo-topics-interpretation(:12number-of-terms, :wide-form, :&echo-function)
+                .echo-topics-interpretation(:12number-of-terms, :wide-form, :dataset, :&echo-function)
                 .echo-statistical-thesaurus(terms => @words.map({ porter($_) }), :wide-form, :12number-of-nearest-neighbors, method => "euclidean", :&echo-function);
+say "time to run LSA pipeline : {$tEnd - $tStart}";
 
 say $lsaObj;
