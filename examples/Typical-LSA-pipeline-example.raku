@@ -1,6 +1,7 @@
 use ML::LatentSemanticAnalyzer;
 use ML::LatentSemanticAnalyzer::Utilities;
 use Lingua::EN::Stem::Porter;
+use Data::Reshapers;
 
 # Collection of texts
 my @dsAbstracts = ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset();
@@ -21,7 +22,6 @@ my @words = <notebook computational function neural talk programming>;
 # Reproducible results (just within a session)
 srand(12);
 
-my &echo-function = {.say for |$_};
 
 my $tStart = now;
 my %stemming-rules = %docs.values.join(' ').lc.split(/\s | <:punct> /, :skip-empty)>>.trim.unique.map({ $_ => porter($_) });
@@ -30,15 +30,24 @@ say "time to compute stemming rules : {$tEnd - $tStart}";
 
 #.say for |%stemming-rules;
 
+# Simple echo function
+#my &echo-function = {.say for |$_};
+
+# Echoing as a pretty table
+my &echo-function = {
+    say to-pretty-table($_, field-names => [|$_.head.keys.grep(* ~~ / <alpha> .*/).sort, |$_.head.keys.grep(* ~~ /\d+/).sort(*.Num) ], align => 'l')
+};
+
 # LSA pipeline
 $tStart = now;
 my $lsaObj =
         ML::LatentSemanticAnalyzer.new
                 .make-document-term-matrix(docs => %docs, :stop-words, :%stemming-rules, :3min-length)
                 .apply-term-weight-functions(global-weight-func => "IDF", local-weight-func => "None", normalizer-func => "Cosine")
-                .extract-topics(:40number-of-topics, :10min-number-of-documents-per-term, method => "SVD")
+                .extract-topics(:40number-of-topics, :10min-number-of-documents-per-term, method => "SVD", :60max-steps, tolerance => 1e-3)
                 .echo-topics-interpretation(:12number-of-terms, :wide-form, :dataset, :&echo-function)
                 .echo-statistical-thesaurus(terms => @words.map({ porter($_) }), :wide-form, :12number-of-nearest-neighbors, method => "euclidean", :&echo-function);
+$tEnd = now;
 say "time to run LSA pipeline : {$tEnd - $tStart}";
 
 say $lsaObj;
