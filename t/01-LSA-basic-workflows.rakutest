@@ -20,26 +20,46 @@ my $lsa = ML::LatentSemanticAnalyzer.new
                 normalizer-func => 'Cosine'
         );
 
-isa-ok $lsa, ML::LatentSemanticAnalyzer, 'creates an LSA object';
-isa-ok $lsa.take-doc-term-mat, Math::SparseMatrix, 'creates a document-term matrix';
-isa-ok $lsa.take-weighted-doc-term-mat, Math::SparseMatrix, 'creates a weighted document-term matrix';
+isa-ok $lsa, ML::LatentSemanticAnalyzer:D, 'creates an LSA object';
+isa-ok $lsa.take-doc-term-mat, Math::SparseMatrix, 'takes th document-term matrix';
+isa-ok $lsa.take-weighted-doc-term-mat, Math::SparseMatrix, 'takes the weighted document-term matrix';
 ok $lsa.take-doc-term-mat.rows-count ≥ 250, 'document-term matrix has the expected document count';
 ok $lsa.take-doc-term-mat.columns-count > 2000, 'document-term matrix has the expected term count';
+isa-ok $lsa.echo-document-term-matrix-statistics, ML::LatentSemanticAnalyzer:D, 'echo document-term matrix statistics';
 
 ok $lsa.extract-topics(number-of-topics => 20, min-number-of-documents-per-term => 20, method => 'SVD', max-steps => 40, tolerance => 1e-2),
         'SVD topic extraction';
 dies-ok { $lsa.extract-topics(number-of-topics => 20, method => 'NNMF', max-steps => 5) },
         'NNMF topic extraction is explicitly unsupported';
 
-$lsa.get-statistical-thesaurus(
-        terms => <function wolfram>,
-        :wide-form,
-        :!echo,
-        number-of-nearest-neighbors => 2,
-        method => 'cosine'
-);
-isa-ok $lsa.take-value, Array, 'statistical thesaurus can be returned in table form';
-is $lsa.take-value.elems, 2, 'wide statistical thesaurus has one row per search term';
+subtest {
+    $lsa.get-topics-interpretation(:12number-of-terms, :wide-form, :dataset, :!echo);
+}, 'topics interpretation';
+
+subtest {
+    $lsa.get-statistical-thesaurus(
+            terms => <function wolfram>,
+            :wide-form,
+            :!echo,
+            number-of-nearest-neighbors => 2,
+            method => 'cosine'
+            );
+    isa-ok $lsa.take-value, Array, 'statistical thesaurus can be returned in table form';
+    is $lsa.take-value.elems, 2, 'wide statistical thesaurus has one row per search term';
+}, 'statistical thesaurus via Cosine distance';
+
+subtest {
+    $lsa.get-statistical-thesaurus(
+            terms => <function wolfram>,
+            :wide-form,
+            :!echo,
+            number-of-nearest-neighbors => 2,
+            method => 'euclidean'
+            );
+    isa-ok $lsa.take-value, Array, 'statistical thesaurus can be returned in table form';
+    is $lsa.take-value.elems, 2, 'wide statistical thesaurus has one row per search term';
+}, 'statistical thesaurus via Euclidean distance';
+
 
 my @queries = 'Notebook of differential equations solutions.',
         'Neural networking training process',
