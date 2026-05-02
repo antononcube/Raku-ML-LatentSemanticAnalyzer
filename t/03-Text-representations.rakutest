@@ -33,9 +33,12 @@ isa-ok $lsa.represent-by-terms($query, :!apply-lsi-functions).take-value, Math::
 ok $lsa.represent-by-terms($query.words, :apply-lsi-functions);
 
 ## 4
-dies-ok {$lsa.represent-by-topics($query.words, :apply-lsi-functions)};
+dies-ok {$lsa.represent-by-terms(rand xx 3, :apply-lsi-functions)};
 
 ## 5
+dies-ok {$lsa.represent-by-topics($query.words, :apply-lsi-functions)};
+
+## 6
 my $lsa2 = $lsa.clone.extract-topics(:20number-of-topics, :100min-number-of-documents-per-term, :40max-steps, tolerance => 1e-2);
 ok $lsa2.represent-by-topics($query.words, :apply-lsi-functions);
 
