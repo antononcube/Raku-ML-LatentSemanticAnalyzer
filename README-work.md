@@ -62,10 +62,11 @@ Here is an example of a LSA pipeline that:
 
 ```raku, eval=FALSE
 use ML::LatentSemanticAnalyzer;
+use ML::LatentSemanticAnalyzer::Utilities;
 use Lingua::EN::Stem::Porter;
 
 # Collection of texts
-my @dsAbstracts = get-abstracts-dataset();
+my @dsAbstracts = ML::LatentSemanticAnalyzer::Utilities::get-abstracts-dataset();
 my %docs = @dsAbstracts.map(*<ID>) Z=> @dsAbstracts.map(*<Abstract>);
 say %docs.elems;
 
@@ -73,7 +74,7 @@ say %docs.elems;
 my %docs2 = %docs.grep({ $_.value ~~ Str:D });
 say %docs2.elems;
 
-# Stemmer object (to preprocess words in the pipeline below)
+# Stemmer function (to preprocess words in the pipeline below)
 say &porter.WHY;
 
 # Words to show statistical thesaurus entries for
@@ -84,15 +85,15 @@ srand(12);
 
 # LSA pipeline
 my $lsaObj =
-        LatentSemanticAnalyzer.new
+        ML::LatentSemanticAnalyzer.new
         .make-document-term-matrix(docs => %docs2, :stop-words, :stemming-rules, :3min-length)
-        .apply_term_weight_functions( 
+        .apply-term-weight-functions( 
                 global-weight-func => "IDF",
                 local-weight-func => "None",
                 normalizer-func => "Cosine")
         .extract-topics(:40number-of-topics, :10min-number-of-documents-per-term, method => "SVD")
         .echo-topics-interpretation(:12number-of-terms, :!wide-form)
-        .echo_statistical_thesaurus(
+        .echo-statistical-thesaurus(
                 terms => @words.map(*.&porter),
                 :wide-form,
                 :12number-of-nearest-neighbors,
@@ -120,7 +121,7 @@ also uses LSI functions -- this package uses LSI methods of the class `ML::Spars
 The Raku pipeline above corresponds to the following pipeline for the Mathematica package
 [AAp1]:
 
-```mathematica
+```wl
 lsaObj =
   LSAMonUnit[aAbstracts]⟹
    LSAMonMakeDocumentTermMatrix["StemmingRules" -> Automatic, "StopWords" -> Automatic]⟹
