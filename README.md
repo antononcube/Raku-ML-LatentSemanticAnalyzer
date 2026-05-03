@@ -109,8 +109,58 @@ This package is based on the Raku package
 ["Math::SparseMatrix"](https://raku.land/zef:antononcube/Math::SparseMatrix), [AAp5]
 
 The package 
-["ML::SparseMatrixRecommender"](https://raku.land/zef:antononcube/ML::SparseMatrixRecommender), [AAp6]
+["ML::SparseMatrixRecommender"](https://raku.land/zef:antononcube/ML::SparseMatrixRecommender), [AAp6],
 also uses LSI functions -- this package uses LSI methods of the class `ML::SparseMatrixRecommender`.
+The statistical thesaurus derivation with the method "cosine-distance" use `ML::SparseMatrixRecommender` recommender.
+
+Several packages can be used to generate LSA workflow code (not just Raku, but other programming languages too) --
+see the section "Code generation with natural language commands" below. 
+
+The following diagram summarizes the relationship between "ML::LatentSemanticAnalysis" and other Raku packages: 
+
+```mermaid
+graph TD
+  LSA[[ML::LatentSemanticAnalyser]]
+  SMR[[ML::SparseMatrixRecommender]]
+  SMAT[[Math::SparseMatrix]]
+  SMATNat[[Math::SparseMatrix::Native]]
+  NLP[[NLP::TemplateEngine]]
+  StopISO[[Lingua::StopwordsISO]]
+  Stem[[Lingua::EN::Stem::Porter]]
+  DSLExam[[DSL::Examples]]
+  LLMResources[[LLM::Resources]]
+  LSAGram[[DSL::English::LatentSemanticaAnalysisWorkflows]]
+  DSLTrans[[DSL::Translators]]
+  LLM{{LLM}}
+
+  LSA --> |LSI functions|SMR
+  LSA --> |statistical thesaurus|SMR
+  LSA --> |representation|SMAT
+  LSA --> |SVD factorization|SMAT
+  LSA -.-> |uses|StopISO
+  LSA -.-> |uses|Stem
+  SMAT --> |wraps|SMATNat
+  SMATNat -.- SVDCode>has SVD implementation]
+  SMR --> |representation|SMAT
+  NLP --> |LLM-based template fill-in|LSA
+  LLMResources -.-> |uses|LLM
+  NLP -.-> |uses|LLM
+
+  DSLExam -.-> |DSL translation examples|LSA
+  LLMResources --> |LLM-based translation|LSA
+  LSAGram --> |grammar-based translation|LSA
+  DSLTrans -.-> |uses|LSAGram
+  DSLTrans --> |grammar based translation|LSA
+  LLMResources -.-> |uses|DSLExam
+
+  subgraph CG["Code generation<br>(multi-language)"]
+    NLP
+    DSLExam
+    LSAGram
+    DSLTrans
+    LLMResources
+  end
+```
 
 ------
 
@@ -220,6 +270,8 @@ concretize('create from aDocs; apply LSI functions IDF, None, Cosine; extract 20
 # 						  method=>"cosine",
 # 						  echo-function=>&put)
 ```
+
+**Remark:** For more LSA-code generation examples see the Jupyter notebook ["Code-generation.ipynb"](./docs/Code-generation.ipynb).  
 
 ------
 
